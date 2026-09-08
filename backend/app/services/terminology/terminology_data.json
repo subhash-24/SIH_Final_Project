@@ -1,0 +1,154 @@
+{
+  "mappings": [
+    {
+      "diagnosis_text_patterns": ["acute myocardial infarction", "heart attack", "ami", "stemi", "nstemi"],
+      "namaste": { "code": "NAMASTE-CV-001", "term": "Hridaya Aghata (Acute Myocardial Infarction)" },
+      "icd11_tm2": { "code": "BA80", "term": "Acute myocardial infarction" }
+    },
+    {
+      "diagnosis_text_patterns": ["acute coronary syndrome", "acs", "unstable angina"],
+      "namaste": { "code": "NAMASTE-CV-002", "term": "Hridaya Vikara — Acute Coronary Syndrome" },
+      "icd11_tm2": { "code": "BA82", "term": "Acute coronary syndrome" }
+    },
+    {
+      "diagnosis_text_patterns": ["angina", "stable angina", "chest pain"],
+      "namaste": { "code": "NAMASTE-CV-003", "term": "Hrid Shoola (Angina Pectoris)" },
+      "icd11_tm2": { "code": "BA80.0", "term": "Stable angina pectoris" }
+    },
+    {
+      "diagnosis_text_patterns": ["hypertension", "high blood pressure", "bp"],
+      "namaste": { "code": "NAMASTE-CV-004", "term": "Rakta Chapa Vriddhi (Hypertension)" },
+      "icd11_tm2": { "code": "BA00", "term": "Essential hypertension" }
+    },
+    {
+      "diagnosis_text_patterns": ["stroke", "cerebrovascular accident", "cva", "ischemic stroke"],
+      "namaste": { "code": "NAMASTE-NS-001", "term": "Pakshaghata (Stroke / CVA)" },
+      "icd11_tm2": { "code": "8B20", "term": "Ischaemic stroke" }
+    },
+    {
+      "diagnosis_text_patterns": ["subarachnoid hemorrhage", "sah", "cerebral hemorrhage"],
+      "namaste": { "code": "NAMASTE-NS-002", "term": "Shira Rakta Srava (Subarachnoid Haemorrhage)" },
+      "icd11_tm2": { "code": "8B00.0", "term": "Subarachnoid haemorrhage" }
+    },
+    {
+      "diagnosis_text_patterns": ["migraine", "migraine headache"],
+      "namaste": { "code": "NAMASTE-NS-003", "term": "Ardhavabhedaka (Migraine)" },
+      "icd11_tm2": { "code": "8A80", "term": "Migraine" }
+    },
+    {
+      "diagnosis_text_patterns": ["diabetes mellitus", "type 2 diabetes", "t2dm", "dm type 2"],
+      "namaste": { "code": "NAMASTE-EN-001", "term": "Madhumeha (Diabetes Mellitus Type 2)" },
+      "icd11_tm2": { "code": "5A11", "term": "Type 2 diabetes mellitus" }
+    },
+    {
+      "diagnosis_text_patterns": ["type 1 diabetes", "t1dm", "insulin dependent diabetes"],
+      "namaste": { "code": "NAMASTE-EN-002", "term": "Madhumeha — Vataja (Type 1 Diabetes Mellitus)" },
+      "icd11_tm2": { "code": "5A10", "term": "Type 1 diabetes mellitus" }
+    },
+    {
+      "diagnosis_text_patterns": ["hypothyroidism", "thyroid deficiency", "underactive thyroid"],
+      "namaste": { "code": "NAMASTE-EN-003", "term": "Galaganda — Kapha (Hypothyroidism)" },
+      "icd11_tm2": { "code": "5A00", "term": "Primary hypothyroidism" }
+    },
+    {
+      "diagnosis_text_patterns": ["hyperthyroidism", "overactive thyroid", "thyrotoxicosis"],
+      "namaste": { "code": "NAMASTE-EN-004", "term": "Galaganda — Pitta (Hyperthyroidism)" },
+      "icd11_tm2": { "code": "5A20", "term": "Hyperthyroidism" }
+    },
+    {
+      "diagnosis_text_patterns": ["pneumonia", "community acquired pneumonia", "cap"],
+      "namaste": { "code": "NAMASTE-RS-001", "term": "Shwasa Kapha Jwara (Pneumonia)" },
+      "icd11_tm2": { "code": "CA40", "term": "Community-acquired pneumonia" }
+    },
+    {
+      "diagnosis_text_patterns": ["asthma", "bronchial asthma", "reactive airway"],
+      "namaste": { "code": "NAMASTE-RS-002", "term": "Tamaka Shwasa (Bronchial Asthma)" },
+      "icd11_tm2": { "code": "CA23", "term": "Asthma" }
+    },
+    {
+      "diagnosis_text_patterns": ["copd", "chronic obstructive pulmonary disease", "emphysema", "chronic bronchitis"],
+      "namaste": { "code": "NAMASTE-RS-003", "term": "Shwasa Roga — Vataja (COPD)" },
+      "icd11_tm2": { "code": "CA22", "term": "Chronic obstructive pulmonary disease" }
+    },
+    {
+      "diagnosis_text_patterns": ["upper respiratory tract infection", "urti", "common cold", "cold"],
+      "namaste": { "code": "NAMASTE-RS-004", "term": "Pratishyaya (Upper Respiratory Infection)" },
+      "icd11_tm2": { "code": "CA00", "term": "Acute upper respiratory infections" }
+    },
+    {
+      "diagnosis_text_patterns": ["typhoid", "enteric fever", "typhoid fever"],
+      "namaste": { "code": "NAMASTE-ID-001", "term": "Pittaja Jwara — Salmonella (Typhoid)" },
+      "icd11_tm2": { "code": "1A07", "term": "Typhoid fever" }
+    },
+    {
+      "diagnosis_text_patterns": ["dengue", "dengue fever", "dengue hemorrhagic fever"],
+      "namaste": { "code": "NAMASTE-ID-002", "term": "Dandaka Jwara (Dengue Fever)" },
+      "icd11_tm2": { "code": "1D2Z", "term": "Dengue" }
+    },
+    {
+      "diagnosis_text_patterns": ["malaria", "plasmodium", "falciparum malaria"],
+      "namaste": { "code": "NAMASTE-ID-003", "term": "Vishama Jwara (Malaria)" },
+      "icd11_tm2": { "code": "1F40", "term": "Malaria" }
+    },
+    {
+      "diagnosis_text_patterns": ["tuberculosis", "tb", "pulmonary tb", "active tb"],
+      "namaste": { "code": "NAMASTE-ID-004", "term": "Rajayakshma (Tuberculosis)" },
+      "icd11_tm2": { "code": "1B10", "term": "Pulmonary tuberculosis" }
+    },
+    {
+      "diagnosis_text_patterns": ["urinary tract infection", "uti", "cystitis"],
+      "namaste": { "code": "NAMASTE-GU-001", "term": "Mutrakriccha (Urinary Tract Infection)" },
+      "icd11_tm2": { "code": "GC08", "term": "Urinary tract infection" }
+    },
+    {
+      "diagnosis_text_patterns": ["chronic kidney disease", "ckd", "renal failure", "kidney failure"],
+      "namaste": { "code": "NAMASTE-GU-002", "term": "Mutra Vikara — Vataja (Chronic Kidney Disease)" },
+      "icd11_tm2": { "code": "GB61", "term": "Chronic kidney disease" }
+    },
+    {
+      "diagnosis_text_patterns": ["gastroenteritis", "viral gastroenteritis", "stomach infection"],
+      "namaste": { "code": "NAMASTE-GI-001", "term": "Atisara (Acute Gastroenteritis)" },
+      "icd11_tm2": { "code": "1A00", "term": "Gastroenteritis or colitis of infectious origin" }
+    },
+    {
+      "diagnosis_text_patterns": ["peptic ulcer", "gastric ulcer", "duodenal ulcer", "pud"],
+      "namaste": { "code": "NAMASTE-GI-002", "term": "Parinaama Shoola (Peptic Ulcer Disease)" },
+      "icd11_tm2": { "code": "DA60", "term": "Peptic ulcer disease" }
+    },
+    {
+      "diagnosis_text_patterns": ["gerd", "acid reflux", "gastroesophageal reflux", "heartburn"],
+      "namaste": { "code": "NAMASTE-GI-003", "term": "Amlapitta (GERD / Acid Peptic Disease)" },
+      "icd11_tm2": { "code": "DA22", "term": "Gastro-oesophageal reflux disease" }
+    },
+    {
+      "diagnosis_text_patterns": ["anemia", "iron deficiency anemia", "anaemia"],
+      "namaste": { "code": "NAMASTE-HM-001", "term": "Pandu (Anaemia)" },
+      "icd11_tm2": { "code": "3A00", "term": "Iron deficiency anaemia" }
+    },
+    {
+      "diagnosis_text_patterns": ["depression", "major depressive disorder", "mdd"],
+      "namaste": { "code": "NAMASTE-MH-001", "term": "Vishada (Major Depressive Disorder)" },
+      "icd11_tm2": { "code": "6A70", "term": "Single episode depressive disorder" }
+    },
+    {
+      "diagnosis_text_patterns": ["anxiety", "anxiety disorder", "generalized anxiety"],
+      "namaste": { "code": "NAMASTE-MH-002", "term": "Chittodvega (Generalized Anxiety Disorder)" },
+      "icd11_tm2": { "code": "6B00", "term": "Generalised anxiety disorder" }
+    },
+    {
+      "diagnosis_text_patterns": ["osteoarthritis", "knee osteoarthritis", "joint pain", "arthritis"],
+      "namaste": { "code": "NAMASTE-MS-001", "term": "Sandhivata (Osteoarthritis)" },
+      "icd11_tm2": { "code": "FA00", "term": "Osteoarthritis" }
+    },
+    {
+      "diagnosis_text_patterns": ["rheumatoid arthritis", "ra", "inflammatory arthritis"],
+      "namaste": { "code": "NAMASTE-MS-002", "term": "Amavata (Rheumatoid Arthritis)" },
+      "icd11_tm2": { "code": "FA20", "term": "Rheumatoid arthritis" }
+    },
+    {
+      "diagnosis_text_patterns": ["fever", "pyrexia", "febrile illness", "high fever"],
+      "namaste": { "code": "NAMASTE-GN-001", "term": "Jwara (Pyrexia / Febrile Illness)" },
+      "icd11_tm2": { "code": "MG26", "term": "Fever of unknown origin" }
+    }
+  ]
+}
