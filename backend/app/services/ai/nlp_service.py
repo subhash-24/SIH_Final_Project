@@ -6,6 +6,8 @@ Uses regex + keyword matching for MVP.
 Interface identical to a production spaCy/Transformers service.
 """
 import re
+import json
+import httpx
 from dataclasses import dataclass, field
 
 
@@ -195,8 +197,171 @@ class MockClinicalNLPService:
         return extract_clinical_entities(text)
 
 
+class OllamaClinicalNLPService:
+    """Clinical extraction service using a local Ollama LLM (e.g. gemma3:4b)."""
+
+    def __init__(self):
+        from app.core.config import settings
+        self.url = f"{settings.ollama_url.rstrip('/')}/api/generate"
+        self.model = settings.ollama_model
+
+    def _build_prompt(self, text: str, context: str = "interview") -> str:
+        if context == "document":
+            return f"""
+You are a medical assistant extracting clinical entities from an OCR-transcribed medical document.
+Extract the following information from the text and return ONLY valid JSON:
+{{
+  "medicine": ["list of medicines mentioned"],
+  "lab_value": ["list of lab results mentioned, with values"],
+  "diagnosis": ["list of diagnoses mentioned"],
+  "doctor": ["list of doctors mentioned"],
+  "hospital": ["list of hospitals mentioned"]
+}}
+If a field is not mentioned, leave it as an empty list.
+
+Document text:
+"{text}"
+"""
+        return f"""
+You are a medical assistant extracting clinical entities from a patient's transcription.
+Extract the following information from the text and return ONLY valid JSON:
+{{
+  "chief_complaint": "The primary symptom",
+  "duration": "How long they have had the symptom",
+  "severity": "E.g., Mild, Moderate, Severe",
+  "radiation": "Where the pain radiates to, if applicable",
+  "associated_symptoms": ["list", "of", "other", "symptoms"]
+}}
+If a field is not mentioned, leave it as null or an empty list.
+
+Patient text:
+"{text}"
+"""
+
+    def _parse_llm_response(self, response_text: str, raw_text: str, context: str = "interview") -> ExtractionResult:
+        # Attempt to find JSON in the response text in case the model outputs markdown blocks
+        json_str = response_text
+        match = re.search(r'```json\s*(.*?)\s*```', response_text, re.DOTALL)
+        if match:
+            json_str = match.group(1)
+        else:
+            # Sometime models just output JSON surrounded by other text
+            start = response_text.find('{')
+            end = response_text.rfind('}')
+            if start != -1 and end != -1:
+                json_str = response_text[start:end+1]
+        
+        entities = []
+        normalized_symptoms = set()
+        
+        try:
+            data = json.loads(json_str)
+            
+            if context == "document":
+                for med in data.get("medicine", []):
+                    entities.append(ClinicalEntity("medicine", str(med)))
+                for lab in data.get("lab_value", []):
+                    entities.append(ClinicalEntity("lab_value", str(lab)))
+                for diag in data.get("diagnosis", []):
+                    entities.append(ClinicalEntity("diagnosis", str(diag)))
+                for doc in data.get("doctor", []):
+                    entities.append(ClinicalEntity("doctor", str(doc)))
+                for hosp in data.get("hospital", []):
+                    entities.append(ClinicalEntity("hospital", str(hosp)))
+            else:
+                if data.get("chief_complaint"):
+                    entities.append(ClinicalEntity("chief_complaint", str(data["chief_complaint"])))
+                    normalized_symptoms.add(str(data["chief_complaint"]).lower().replace(" ", "_"))
+                    
+                if data.get("duration"):
+                    entities.append(ClinicalEntity("duration", str(data["duration"])))
+                    
+                if data.get("severity"):
+                    entities.append(ClinicalEntity("severity", str(data["severity"]).title()))
+                    
+                if data.get("radiation"):
+                    entities.append(ClinicalEntity("radiation", str(data["radiation"])))
+                    
+                assoc = data.get("associated_symptoms", [])
+                if assoc and isinstance(assoc, list):
+                    entities.append(ClinicalEntity("associated", ", ".join(str(s) for s in assoc)))
+                    for s in assoc:
+                        normalized_symptoms.add(str(s).lower().replace(" ", "_"))
+                
+                # HPI Summary
+                hpi_parts = []
+                if data.get("chief_complaint"):
+                    hpi_parts.append(f"Patient presents with {data['chief_complaint']}")
+                if data.get("duration"):
+                    hpi_parts.append(f"for {data['duration']}")
+                if data.get("severity"):
+                    hpi_parts.append(f"described as {data['severity'].lower()}")
+                if data.get("radiation"):
+                    hpi_parts.append(f"radiating to {data['radiation'].lower()}")
+                if assoc and isinstance(assoc, list):
+                    hpi_parts.append(f"with associated {', '.join(str(s).lower() for s in assoc)}")
+
+                hpi = ". ".join(hpi_parts) + "." if hpi_parts else raw_text
+                if entities:
+                    entities.append(ClinicalEntity("hpi", hpi))
+                
+        except json.JSONDecodeError:
+            # Fallback to mock on parse error
+            return extract_clinical_entities(raw_text)
+
+        # Also add symptom keys for red-flag engine
+        if context == "interview":
+            from app.services.rules.red_flag_engine import normalize_symptoms as rfe_normalize
+            normalized_symptoms |= rfe_normalize(raw_text)
+
+        return ExtractionResult(
+            entities=entities,
+            normalized_symptoms=normalized_symptoms,
+            raw_text=raw_text,
+            is_mock=False,
+        )
+
+    async def extract_async(self, text: str, context: str = "interview") -> ExtractionResult:
+        prompt = self._build_prompt(text, context=context)
+        payload = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",
+        }
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(self.url, json=payload)
+                response.raise_for_status()
+                data = response.json()
+                return self._parse_llm_response(data.get("response", ""), text, context=context)
+        except Exception as e:
+            print(f"Ollama API failed: {e}. Falling back to mock extraction.")
+            return extract_clinical_entities(text)
+
+    def extract(self, text: str, context: str = "interview") -> ExtractionResult:
+        # Sync extraction is generally discouraged if it requires HTTP calls, but we can wrap it or fallback
+        # Since FastAPI handles async easily, we just use a sync httpx client for this block
+        prompt = self._build_prompt(text, context=context)
+        payload = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",
+        }
+        try:
+            with httpx.Client(timeout=30.0) as client:
+                response = client.post(self.url, json=payload)
+                response.raise_for_status()
+                data = response.json()
+                return self._parse_llm_response(data.get("response", ""), text, context=context)
+        except Exception as e:
+            print(f"Ollama API failed (sync): {e}. Falling back to mock extraction.")
+            return extract_clinical_entities(text)
+
+
 def get_nlp_service():
     from app.core.config import settings
-    if settings.nlp_service == "mock":
-        return MockClinicalNLPService()
+    if settings.nlp_service == "ollama":
+        return OllamaClinicalNLPService()
     return MockClinicalNLPService()

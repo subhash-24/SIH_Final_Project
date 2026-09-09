@@ -56,8 +56,8 @@ async def upload_document(
     db.commit()
     db.refresh(doc)
 
-    # Mock OCR processing
-    await _run_mock_ocr(doc, db)
+    # Process Document (OCR + NLP)
+    await _process_document(doc, db)
 
     log = AuditLog(action="document_uploaded", resource_type="document",
                    resource_id=doc.id, patient_id=None)
@@ -76,77 +76,36 @@ async def upload_document(
     }
 
 
-async def _run_mock_ocr(doc: Document, db: Session):
-    """Mock OCR + entity extraction pipeline."""
-    import asyncio
-    await asyncio.sleep(0.5)  # simulate processing
+async def _process_document(doc: Document, db: Session):
+    """Run OCR + entity extraction pipeline."""
+    from app.services.ai.ocr_service import get_ocr_service
+    from app.services.ai.nlp_service import get_nlp_service
 
-    # Mock OCR text based on document type
-    mock_texts = {
-        "prescription": (
-            "Dr. Rajan Mehta, MBBS MD\nCity Hospital, Mumbai\n"
-            "Date: 15 March 2025\nPatient: Ramesh Kumar\n"
-            "Rx:\n1. Tab. Atorvastatin 20mg — 0-0-1\n"
-            "2. Tab. Aspirin 75mg — 1-0-0\n"
-            "3. Tab. Metoprolol 25mg — 1-0-1\n"
-            "Follow up: 1 week\nDiagnosis: Hypertension, CAD"
-        ),
-        "lab_report": (
-            "Central Diagnostics Lab\nReport Date: 10 Jan 2025\n"
-            "Patient: Ramesh Kumar Age: 45\n"
-            "Complete Blood Count:\n"
-            "Haemoglobin: 13.2 g/dL\nWBC: 8,200/μL\nPlatelets: 210,000/μL\n"
-            "Lipid Profile:\n"
-            "Total Cholesterol: 234 mg/dL (High)\nLDL: 158 mg/dL (High)\n"
-            "HDL: 42 mg/dL\nTriglycerides: 180 mg/dL"
-        ),
-        "discharge_summary": (
-            "Apollo Hospital\nDischarge Summary\n"
-            "Date of Admission: 05 Dec 2024\nDate of Discharge: 10 Dec 2024\n"
-            "Diagnosis: Acute Gastroenteritis\n"
-            "Treatment: IV fluids, antibiotics, anti-emetics\n"
-            "Condition at discharge: Stable"
-        ),
-    }
-
-    ocr_text = mock_texts.get(doc.document_type, f"Document content for {doc.original_filename}")
+    # 1. OCR Extraction
+    ocr_service = get_ocr_service()
+    # pass the full path of the saved file to the OCR service
+    ocr_text = await ocr_service.extract_text(doc.storage_path, document_type=doc.document_type)
     doc.ocr_text = ocr_text
     doc.status = DocumentStatus.EXTRACTED
 
-    # Mock entity extraction
-    mock_entities = {
-        "prescription": [
-            {"entity_type": "medicine", "value": "Atorvastatin 20mg", "confidence": 0.92},
-            {"entity_type": "medicine", "value": "Aspirin 75mg", "confidence": 0.91},
-            {"entity_type": "medicine", "value": "Metoprolol 25mg", "confidence": 0.90},
-            {"entity_type": "doctor", "value": "Dr. Rajan Mehta", "confidence": 0.95},
-            {"entity_type": "diagnosis", "value": "Hypertension, CAD", "confidence": 0.88},
-            {"entity_type": "date", "value": "15 March 2025", "confidence": 0.98},
-        ],
-        "lab_report": [
-            {"entity_type": "lab_value", "value": "Haemoglobin: 13.2 g/dL", "confidence": 0.95},
-            {"entity_type": "lab_value", "value": "Total Cholesterol: 234 mg/dL (High)", "confidence": 0.94},
-            {"entity_type": "lab_value", "value": "LDL: 158 mg/dL (High)", "confidence": 0.93},
-            {"entity_type": "date", "value": "10 Jan 2025", "confidence": 0.97},
-        ],
-        "discharge_summary": [
-            {"entity_type": "diagnosis", "value": "Acute Gastroenteritis", "confidence": 0.93},
-            {"entity_type": "hospital", "value": "Apollo Hospital", "confidence": 0.96},
-            {"entity_type": "date", "value": "05 Dec 2024 – 10 Dec 2024", "confidence": 0.95},
-        ],
-    }
+    # 2. NLP Extraction (using the same NLP service as interviews)
+    nlp_service = get_nlp_service()
+    extraction = await nlp_service.extract_async(ocr_text, context="document")
 
-    for entity_data in mock_entities.get(doc.document_type, []):
-        extraction = DocumentExtraction(
+    # Note: For mock OCR, it might still return some structured entities or we fallback to Ollama output
+    # Since Ollama might output chief complaint, etc. we map it to generic extractions for documents
+    for entity in extraction.entities:
+        extraction_record = DocumentExtraction(
             document_id=doc.id,
-            entity_type=entity_data["entity_type"],
-            value=entity_data["value"],
-            confidence=entity_data["confidence"],
+            entity_type=entity.field_type,
+            value=entity.value,
+            confidence=entity.confidence,
         )
-        db.add(extraction)
+        db.add(extraction_record)
 
     db.commit()
     db.refresh(doc)
+
 
 
 @router.get("/documents/{document_id}")

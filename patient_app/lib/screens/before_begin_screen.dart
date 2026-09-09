@@ -3,11 +3,41 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../core/design_system.dart';
 import '../state/app_state.dart';
+import '../services/api_service.dart';
 
 /// Screen 05 — Before We Begin
 /// Explains what will happen — sets correct expectations.
-class BeforeBeginScreen extends StatelessWidget {
+class BeforeBeginScreen extends StatefulWidget {
   const BeforeBeginScreen({super.key});
+  @override State<BeforeBeginScreen> createState() => _BeforeBeginScreenState();
+}
+
+class _BeforeBeginScreenState extends State<BeforeBeginScreen> {
+  bool _loading = false;
+
+  Future<void> _startInterview() async {
+    final state = context.read<AppState>();
+    if (state.encounterId == null) return;
+    
+    setState(() => _loading = true);
+    try {
+      final res = await ApiService.startInterview(
+        encounterId: state.encounterId!,
+        language: state.languageCode,
+      );
+      state.setInterview(res['interview_id']);
+      state.setCurrentQuestion(res['current_question'] as String?, 0);
+      if (mounted) context.go('/voice-interview');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to start interview: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +132,8 @@ class BeforeBeginScreen extends StatelessWidget {
               PrimaryButton(
                 label: state.tr("Let's Begin", 'शुरू करें'),
                 icon: Icons.mic_rounded,
-                onPressed: () => context.go('/voice-interview'),
+                loading: _loading,
+                onPressed: _startInterview,
               ),
             ],
           ),

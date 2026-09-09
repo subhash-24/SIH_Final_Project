@@ -9,6 +9,7 @@ class TranscriptScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Transcript'),
@@ -36,9 +37,11 @@ class TranscriptScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.border),
                   ),
-                  child: const SingleChildScrollView(
+                  child: SingleChildScrollView(
                     child: Text(
-                      'I have been having a severe headache for the past 3 days and some mild fever. No nausea.',
+                      state.transcript.isNotEmpty 
+                          ? state.transcript 
+                          : state.tr('No transcript available.', 'कोई ट्रांसक्रिप्ट उपलब्ध नहीं है।'),
                       style: AppTextStyles.body,
                     ),
                   ),

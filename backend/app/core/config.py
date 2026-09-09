@@ -36,9 +36,13 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:3000"
 
     # AI Services
-    asr_service: str = "mock"
-    ocr_service: str = "mock"
-    nlp_service: str = "mock"
+    asr_service: str = "real"
+    ocr_service: str = "real"
+    nlp_service: str = "ollama"  # Default to ollama instead of mock
+
+    # Ollama Local LLM
+    ollama_url: str = "http://localhost:11434"
+    ollama_model: str = "gemma3:4b"
 
     # ABHA
     abha_service: str = "mock"

@@ -82,5 +82,5 @@ def startup():
         finally:
             db.close()
 
-    print(f"🏥 Arogya-Saathi backend started — {settings.environment}")
+    print(f"Arogya-Saathi backend started - {settings.environment}")
     print(f"   API docs: http://localhost:{settings.port}/api/docs")

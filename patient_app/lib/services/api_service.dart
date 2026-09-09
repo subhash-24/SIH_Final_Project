@@ -63,22 +63,49 @@ class ApiService {
     return _parse(res);
   }
 
-  /// Submit text response (mock audio path for demo)
-  static Future<Map<String, dynamic>> submitTextResponse({
+  /// Submit actual audio recording
+  static Future<Map<String, dynamic>> submitAudioFile({
     required String interviewId,
+    required List<int> audioBytes,
     required String language,
-    String scenarioHint = 'chest',
+    String filename = 'audio.webm',
   }) async {
     final request = http.MultipartRequest(
       'POST',
       Uri.parse('$_baseUrl/interviews/$interviewId/audio'),
     );
     request.fields['language'] = language;
-    request.fields['scenario_hint'] = scenarioHint;
+    request.files.add(http.MultipartFile.fromBytes('audio', audioBytes, filename: filename));
 
     final res = await request.send();
     final body = await res.stream.bytesToString();
-    return jsonDecode(body) as Map<String, dynamic>;
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return jsonDecode(body) as Map<String, dynamic>;
+    }
+    throw Exception('API error ${res.statusCode}: $body');
+  }
+
+  /// Upload Document
+  static Future<Map<String, dynamic>> uploadDocument({
+    required String encounterId,
+    required List<int> fileBytes,
+    String filename = 'document.jpg',
+    String docType = 'prescription',
+  }) async {
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$_baseUrl/documents'),
+    );
+    request.fields['encounter_id'] = encounterId;
+    request.fields['document_type'] = docType;
+    request.files.add(http.MultipartFile.fromBytes('file', fileBytes, filename: filename));
+
+    final res = await request.send();
+    final body = await res.stream.bytesToString();
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return jsonDecode(body) as Map<String, dynamic>;
+    }
+    throw Exception('API error ${res.statusCode}: $body');
   }
 
   /// Complete interview

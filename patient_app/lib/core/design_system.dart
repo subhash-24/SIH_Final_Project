@@ -180,8 +180,9 @@ class PrimaryButton extends StatelessWidget {
 class SecondaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
+  final IconData? icon;
 
-  const SecondaryButton({super.key, required this.label, this.onPressed});
+  const SecondaryButton({super.key, required this.label, this.onPressed, this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -195,12 +196,21 @@ class SecondaryButton extends StatelessWidget {
           side: const BorderSide(color: AppColors.brand, width: 1.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        child: Text(
-          label,
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.brand,
-            fontWeight: FontWeight.w600,
-          ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 20),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              label,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.brand,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );
