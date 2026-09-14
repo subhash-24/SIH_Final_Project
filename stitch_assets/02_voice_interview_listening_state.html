@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><title>Arogya-Saathi Check-in</title><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-primary-fixed": "#00201f", "secondary-fixed-dim": "#89d6b1", "on-secondary-container": "#1f6f50", "outline": "#6f7978", "primary": "#00514f", "on-tertiary-fixed": "#2c1600", "primary-container": "#0f6b68", "secondary": "#186b4c", "surface-variant": "#d0e7e5", "surface-container-highest": "#d0e7e5", "on-surface-variant": "#3f4948", "on-primary-container": "#9be9e4", "surface-dim": "#c8dfdc", "on-secondary-fixed": "#002114", "surface-container-high": "#d6edeb", "on-secondary": "#ffffff", "secondary-fixed": "#a5f3cc", "on-background": "#0a1f1e", "primary-fixed-dim": "#87d4d0", "on-primary": "#ffffff", "surface-container-low": "#e1f8f6", "error-container": "#ffdad6", "on-error": "#ffffff", "on-tertiary": "#ffffff", "surface": "#e7fefc", "tertiary": "#6b3d00", "on-surface": "#0a1f1e", "on-secondary-fixed-variant": "#005137", "error": "#ba1a1a", "tertiary-fixed": "#ffdcbd", "primary-fixed": "#a3f0ec", "inverse-on-surface": "#dff5f3", "surface-container-lowest": "#ffffff", "surface-bright": "#e7fefc", "background": "#e7fefc", "inverse-surface": "#203433", "on-tertiary-container": "#ffd3a9", "surface-container": "#dcf2f0", "secondary-container": "#a2f0c9", "on-primary-fixed-variant": "#00504d", "surface-tint": "#0b6a67", "on-tertiary-fixed-variant": "#693c00", "tertiary-container": "#8c5200", "outline-variant": "#bec9c7", "tertiary-fixed-dim": "#ffb86e", "inverse-primary": "#87d4d0", "on-error-container": "#93000a" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "margin": "1.5rem", "space-md": "1rem", "space-sm": "0.5rem", "space-xl": "2rem", "space-xs": "0.25rem", "space-lg": "1.5rem", "gutter": "1.25rem" }, "fontFamily": { "numerical-vital": ["Inter"], "label-sm": ["Inter"], "headline-xl": ["Plus Jakarta Sans"], "body-sm": ["Inter"], "label-lg": ["Inter"], "body-lg": ["Inter"], "headline-xl-mobile": ["Plus Jakarta Sans"], "headline-lg": ["Plus Jakarta Sans"], "label-md": ["Inter"], "headline-md": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"], "body-md": ["Inter"] }, "fontSize": { "numerical-vital": ["28px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }], "headline-xl": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }], "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "headline-xl-mobile": ["26px", { "lineHeight": "34px", "letterSpacing": "-0.015em", "fontWeight": "600" }], "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" }], "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }], "body-md": ["15px", { "lineHeight": "22px", "fontWeight": "400" }] } } } };</script><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;background-color:#e7fefc;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-on-surface pt-safe pb-safe flex flex-col min-h-screen antialiased selection:bg-primary-fixed selection:text-on-primary-fixed"><main class="flex-1 flex flex-col relative w-full bg-surface px-margin"><div class="flex flex-col w-full pb-8">
+<div class="flex items-center justify-between py-2 mb-3">
+<div class="flex items-center space-x-2">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+        Step 2 of 5
+      </span>
+<span class="text-outline-variant">•</span>
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">
+        Symptoms &amp; Chief Complaint
+      </span>
+</div>
+<div class="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-secondary-container text-on-secondary-container">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+<span class="font-label-sm text-label-sm">Hindi / Hinglish Detected</span>
+</div>
+</div>
+<div class="w-full bg-surface-container-high h-1 rounded-full mb-6 overflow-hidden">
+<div class="bg-primary h-full rounded-full transition-all duration-500 ease-out" style="width: 40%"></div>
+</div>
+<div class="flex flex-col space-y-1 mb-4">
+<h1 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface">
+      Tell us what is troubling you today
+    </h1>
+<p class="font-headline-sm text-headline-sm text-primary-container">
+      बताइए, आज आपको क्या परेशानी महसूस हो रही है?
+    </p>
+</div>
+<div class="p-3.5 bg-surface-container-lowest rounded-xl shadow-sm mb-6">
+<div class="flex items-start space-x-3">
+<span class="material-symbols-outlined text-primary-container text-[20px] mt-0.5 shrink-0" style="font-variation-settings: 'FILL' 1;">
+        info
+      </span>
+<div class="flex flex-col space-y-0.5">
+<span class="font-label-md text-label-md text-on-surface font-medium">
+          Speak naturally in your own words / अपनी भाषा में बोलें
+        </span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+          For example: <span class="italic text-on-surface">"I have had a dull chest ache and fever since yesterday afternoon."</span>
+</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-5 shadow-sm flex flex-col items-center mb-5">
+<div class="inline-flex items-center space-x-2 px-3 py-1 rounded bg-surface-container-low mb-6">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+</span>
+<span class="font-label-md text-label-md text-on-secondary-container font-medium tracking-wide">
+        Listening... • सुन रहे हैं
+      </span>
+</div>
+<div class="relative flex items-center justify-center mb-6">
+<div class="absolute w-28 h-28 rounded-full bg-surface-container-high transition-all duration-700 ease-in-out" id="voiceRingOuter"></div>
+<div class="absolute w-22 h-22 rounded-full bg-surface-container transition-all duration-300" id="voiceRingInner"></div>
+<button aria-label="Toggle voice recording" class="relative z-10 w-16 h-16 rounded-full bg-primary-container text-on-primary flex items-center justify-center shadow-md focus:outline-none transition-transform active:scale-95" id="micBtn" type="button">
+<span class="material-symbols-outlined text-[30px]" id="micIcon" style="font-variation-settings: 'FILL' 1;">
+          mic
+        </span>
+</button>
+</div>
+<div class="flex items-center justify-center space-x-1 h-8 px-4 w-full max-w-[200px] mb-5">
+<span class="w-1 rounded-full bg-primary transition-all duration-150 h-3" id="wf1"></span>
+<span class="w-1 rounded-full bg-primary transition-all duration-150 h-5" id="wf2"></span>
+<span class="w-1 rounded-full bg-primary transition-all duration-150 h-7" id="wf3"></span>
+<span class="w-1 rounded-full bg-primary transition-all duration-150 h-4" id="wf4"></span>
+<span class="w-1 rounded-full bg-primary transition-all duration-150 h-6" id="wf5"></span>
+<span class="w-1 rounded-full bg-primary transition-all duration-150 h-8" id="wf6"></span>
+<span class="w-1 rounded-full bg-primary transition-all duration-150 h-5" id="wf7"></span>
+<span class="w-1 rounded-full bg-primary transition-all duration-150 h-3" id="wf8"></span>
+</div>
+<div class="w-full bg-surface-container-low rounded-lg p-4 mb-2">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant tracking-wider uppercase">
+          Live Transcription / ट्रांसक्रिप्शन
+        </span>
+<span class="font-label-sm text-label-sm text-primary font-medium flex items-center space-x-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span>Syncing</span>
+</span>
+</div>
+<p class="font-body-lg text-body-lg text-on-surface font-medium leading-relaxed mb-2.5" id="transcriptionSpeech">
+        "Doctor saab, pichle teen din se pet mein upar ki taraf dard hai, aur khana khane ke baad jalan badh jaati hai..."
+      </p>
+<div class="pt-2 bg-surface-container rounded p-2.5">
+<span class="font-label-sm text-label-sm text-primary-container font-semibold block mb-0.5">
+          Clinical Summary Extraction:
+        </span>
+<p class="font-body-sm text-body-sm text-on-surface">
+          Persistent epigastric pain for 3 days, worsens post meals. Associated dyspepsia.
+        </p>
+</div>
+</div>
+<div class="flex items-center justify-between w-full pt-1 px-1">
+<div class="flex items-center space-x-1.5 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">volume_up</span>
+<span>Hindi audio prompts enabled</span>
+</div>
+<button class="flex items-center space-x-1 px-2.5 py-1 rounded text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors" id="pauseBtn" type="button">
+<span class="material-symbols-outlined text-[16px]">pause</span>
+<span id="pauseBtnLabel">Pause speech • रोकें</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3 mb-6">
+<div class="p-3 bg-surface-container-lowest rounded-lg shadow-sm flex flex-col justify-between">
+<div class="flex items-center space-x-1.5 text-on-surface-variant mb-1">
+<span class="material-symbols-outlined text-[18px]">timer</span>
+<span class="font-label-sm text-label-sm">Duration</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">34s</span>
+</div>
+<div class="p-3 bg-surface-container-lowest rounded-lg shadow-sm flex flex-col justify-between">
+<div class="flex items-center space-x-1.5 text-on-surface-variant mb-1">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+<span class="font-label-sm text-label-sm">Speech Clarity</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-secondary font-semibold">Optimal (98%)</span>
+</div>
+</div>
+<div class="flex flex-col space-y-3">
+<button class="w-full h-14 bg-primary hover:bg-primary-container active:bg-primary text-on-primary font-label-lg text-label-lg rounded-xl shadow-sm flex items-center justify-center space-x-2 transition-colors" type="button">
+<span>Review &amp; Confirm Details • आगे बढ़ें</span>
+<span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+<button class="w-full h-12 bg-surface-container-lowest text-primary font-label-lg text-label-lg rounded-xl shadow-sm hover:bg-surface-container-high transition-colors flex items-center justify-center space-x-2" type="button">
+<span class="material-symbols-outlined text-[18px]">keyboard</span>
+<span>Prefer typing instead • लिख कर बताएं</span>
+</button>
+</div>
+</div>
+<script>
+(function() {
+  const bars = [
+    document.getElementById('wf1'),
+    document.getElementById('wf2'),
+    document.getElementById('wf3'),
+    document.getElementById('wf4'),
+    document.getElementById('wf5'),
+    document.getElementById('wf6'),
+    document.getElementById('wf7'),
+    document.getElementById('wf8')
+  ];
+  const ringOuter = document.getElementById('voiceRingOuter');
+  const ringInner = document.getElementById('voiceRingInner');
+  const micBtn = document.getElementById('micBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const pauseLabel = document.getElementById('pauseBtnLabel');
+  let isListening = true;
+  let intervalId = null;
+
+  function randomizeWaveform() {
+    if (!isListening) return;
+    bars.forEach(bar => {
+      if (!bar) return;
+      const h = Math.floor(Math.random() * 22) + 6;
+      bar.style.height = h + 'px';
+    });
+    if (ringOuter && ringInner) {
+      const scale = 1 + Math.random() * 0.15;
+      ringOuter.style.transform = `scale(${scale})`;
+      ringInner.style.transform = `scale(${1 + Math.random() * 0.08})`;
+    }
+  }
+
+  intervalId = setInterval(randomizeWaveform, 180);
+
+  function toggleListeningState() {
+    isListening = !isListening;
+    if (pauseLabel) {
+      pauseLabel.textContent = isListening ? 'Pause speech • रोकें' : 'Resume • शुरू करें';
+    }
+    if (!isListening) {
+      bars.forEach(b => { if(b) b.style.height = '4px'; });
+      if (ringOuter) ringOuter.style.transform = 'scale(1)';
+      if (ringInner) ringInner.style.transform = 'scale(1)';
+    }
+  }
+
+  if (pauseBtn) {
+    pauseBtn.addEventListener('click', toggleListeningState);
+  }
+  if (micBtn) {
+    micBtn.addEventListener('click', toggleListeningState);
+  }
+})();
+</script></main></body></html>

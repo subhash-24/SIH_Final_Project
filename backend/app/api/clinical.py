@@ -92,8 +92,8 @@ async def _process_document(doc: Document, db: Session):
     nlp_service = get_nlp_service()
     extraction = await nlp_service.extract_async(ocr_text, context="document")
 
-    # Note: For mock OCR, it might still return some structured entities or we fallback to Ollama output
-    # Since Ollama might output chief complaint, etc. we map it to generic extractions for documents
+    # Note: Structured entities extracted via Cloud LLM service (with rule fallback)
+    # Map extracted entities to document extractions
     for entity in extraction.entities:
         extraction_record = DocumentExtraction(
             document_id=doc.id,

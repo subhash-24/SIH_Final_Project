@@ -6,6 +6,11 @@ import httpx
 import json
 import time
 import sys
+import io
+
+# Ensure UTF-8 stdout for Windows consoles
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
 
 BASE = "http://localhost:8000/api/v1"
 
@@ -69,12 +74,8 @@ def test_full_flow():
         print(f"    - {field['field_type']}: {field['value']} "
               f"(conf: {field['confidence']}, src: {field['source']})")
     
-    # Check if Ollama was used (mock has specific confidence values)
-    confidences = [f['confidence'] for f in result['extracted_fields']]
-    mock_confidences = {0.92, 0.85, 0.80, 0.83, 0.82, 0.78}
-    is_ollama = not all(c in mock_confidences for c in confidences)
-    
-    print(f"\n  NLP Engine: {'🤖 OLLAMA (Real AI)' if is_ollama else '📋 MOCK (Regex fallback)'}")
+    # Check NLP Engine
+    print(f"\n  NLP Engine: {'🤖 CLOUD LLM' if not result['is_mock'] else '📋 DETERMINISTIC NLP'}")
     
     if result["has_red_flags"]:
         print(f"\n  🚨 Red Flags ({len(result['red_flags'])}):")
@@ -158,10 +159,7 @@ def test_full_flow():
     fhir_meta = r.json()
     print(f"  ✓ FHIR version: {fhir_meta['fhirVersion']}")
 
-    print("\n" + "=" * 60)
-    print("  ALL TESTS PASSED ✓")
-    print("=" * 60)
-    print(f"\n  NLP Engine used: {'🤖 OLLAMA (gemma3:4b)' if is_ollama else '📋 MOCK (regex)'}")
+    print(f"\n  NLP Engine: Cloud LLM API with deterministic fallback")
     print(f"  Backend: http://localhost:8000")
     print(f"  API Docs: http://localhost:8000/api/docs")
     print(f"  Physician: dr.sharma@arogyasaathi.demo / demo@123")

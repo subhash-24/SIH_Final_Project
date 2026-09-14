@@ -38,11 +38,13 @@ class Settings(BaseSettings):
     # AI Services
     asr_service: str = "real"
     ocr_service: str = "real"
-    nlp_service: str = "ollama"  # Default to ollama instead of mock
+    nlp_service: str = "cloud_llm"  # Cloud LLM API service
 
-    # Ollama Local LLM
-    ollama_url: str = "http://localhost:11434"
-    ollama_model: str = "gemma3:4b"
+    # Cloud LLM Configuration
+    llm_provider: str = "openai"    # "openai", "gemini", or "mock"
+    llm_api_key: str = ""           # API Key loaded from environment
+    llm_model: str = "gpt-4o-mini"  # Model identifier
+    llm_base_url: str = ""          # Optional custom provider URL or gateway
 
     # ABHA
     abha_service: str = "mock"

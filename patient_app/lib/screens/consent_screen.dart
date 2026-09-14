@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 import '../core/design_system.dart';
 import '../state/app_state.dart';
 
-/// Screen 03 — Consent
-/// Simple, clear, non-legal. Never hide consent behind dense text.
+/// Screen 03 — Consent & Clinical Intake Notice
+/// Clear, dignified, non-legalistic, DPDP / ABDM compliant
 class ConsentScreen extends StatelessWidget {
   const ConsentScreen({super.key});
 
@@ -15,126 +15,173 @@ class ConsentScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/language'),
+        ),
+        title: Text(state.tr('Informed Consent', 'सहमति एवं गोपनीयता')),
+      ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                state.tr('Before We Collect Information', 'जानकारी लेने से पहले'),
-                style: AppTextStyles.heading,
-              ),
-              const SizedBox(height: AppSpacing.lg),
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.lg,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 680),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const FlowProgressIndicator(
+                          currentStep: 2,
+                          totalSteps: 7,
+                          stepLabel: 'Clinical Consent • सहमति',
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
 
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      _ConsentPoint(
-                        icon: Icons.mic_rounded,
-                        title: state.tr('Voice Recording', 'आवाज़ रिकॉर्डिंग'),
-                        body: state.tr(
-                          'We will record your voice to understand what is troubling you. This helps us structure your health information.',
-                          'आपकी समस्या समझने के लिए हम आपकी आवाज़ रिकॉर्ड करेंगे। इससे आपकी स्वास्थ्य जानकारी व्यवस्थित होगी।',
+                        Text(
+                          state.tr(
+                            'Before We Begin Clinical Intake',
+                            'जांच और विवरण दर्ज करने से पहले',
+                          ),
+                          style: AppTextStyles.headlineLg,
                         ),
-                      ),
-                      _ConsentPoint(
-                        icon: Icons.document_scanner_rounded,
-                        title: state.tr('Document Processing', 'दस्तावेज़ प्रसंस्करण'),
-                        body: state.tr(
-                          'If you share previous medical documents, we will process them to extract relevant health information.',
-                          'यदि आप पुराने मेडिकल दस्तावेज़ साझा करते हैं, तो हम उनसे स्वास्थ्य जानकारी निकालेंगे।',
+                        const SizedBox(height: 4),
+                        Text(
+                          state.tr(
+                            'Please review how your spoken words and medical records are processed for today’s OPD consultation.',
+                            'कृपया समझें कि आपकी बातचीत और पुराने पर्चे आज के परामर्श के लिए कैसे सुरक्षित रूप से दर्ज किए जाते हैं।',
+                          ),
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
-                      ),
-                      _ConsentPoint(
-                        icon: Icons.psychology_rounded,
-                        title: state.tr('AI-Assisted Processing', 'AI-सहायक प्रसंस्करण'),
-                        body: state.tr(
-                          'AI technology helps organize your information. A physician will review everything before any clinical decision.',
-                          'AI तकनीक आपकी जानकारी व्यवस्थित करने में मदद करती है। किसी भी नैदानिक निर्णय से पहले एक डॉक्टर सब कुछ देखेंगे।',
+
+                        const SizedBox(height: AppSpacing.xl),
+
+                        // Points List
+                        _ConsentCard(
+                          icon: Icons.mic,
+                          iconColor: AppColors.primary,
+                          title: state.tr('Spoken Voice Intake • आवाज़ रिकॉर्डिंग', 'आवाज़ रिकॉर्डिंग'),
+                          description: state.tr(
+                            'Your spoken description of symptoms is converted to structured clinical notes for the doctor. Audio is encrypted and erased post-consultation.',
+                            'आपके द्वारा बोले गए लक्षणों को डॉक्टर के लिए व्यवस्थित नोट्स में बदला जाता है। ऑडियो सुरक्षित और एन्क्रिप्टेड रहता है।',
+                          ),
                         ),
-                      ),
-                      _ConsentPoint(
-                        icon: Icons.person_rounded,
-                        title: state.tr('Physician Review', 'चिकित्सक समीक्षा'),
-                        body: state.tr(
-                          'All information is reviewed by a qualified physician. AI does not make medical decisions.',
-                          'सभी जानकारी एक योग्य चिकित्सक द्वारा समीक्षा की जाती है। AI चिकित्सा निर्णय नहीं लेता।',
+                        const SizedBox(height: AppSpacing.md),
+
+                        _ConsentCard(
+                          icon: Icons.document_scanner,
+                          iconColor: AppColors.info,
+                          title: state.tr('Document OCR Extraction • पर्चा स्कैन', 'पर्चा स्कैन'),
+                          description: state.tr(
+                            'Prior prescriptions and lab results are scanned only to help the doctor review your existing medications and past tests.',
+                            'पुराने पर्चे और लैब रिपोर्ट केवल डॉक्टर को आपकी वर्तमान दवाएं और पुरानी रिपोर्ट दिखाने के लिए स्कैन किए जाते हैं।',
+                          ),
                         ),
-                      ),
-                      _ConsentPoint(
-                        icon: Icons.lock_rounded,
-                        title: state.tr('Your Privacy', 'आपकी गोपनीयता'),
-                        body: state.tr(
-                          'Your data is kept private and secure. It is only shared with your treating physician.',
-                          'आपका डेटा निजी और सुरक्षित रखा जाता है। यह केवल आपके उपचार करने वाले चिकित्सक के साथ साझा किया जाता है।',
+                        const SizedBox(height: AppSpacing.md),
+
+                        _ConsentCard(
+                          icon: Icons.health_and_safety,
+                          iconColor: AppColors.success,
+                          title: state.tr('Physician Review Guarantee • चिकित्सक द्वारा जांच', 'चिकित्सक द्वारा जांच'),
+                          description: state.tr(
+                            'AI assists only in typing and structuring. Your consulting physician evaluates all findings and makes 100% of diagnostic decisions.',
+                            'एआई केवल व्यवस्थित करने में मदद करता है। अंतिम जांच और इलाज का निर्णय पूरी तरह आपके डॉक्टर द्वारा किया जाता है।',
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: AppSpacing.md),
+
+                        _ConsentCard(
+                          icon: Icons.lock,
+                          iconColor: AppColors.textPrimary,
+                          title: state.tr('ABDM & DPDP Privacy • डेटा सुरक्षा', 'डेटा सुरक्षा'),
+                          description: state.tr(
+                            'Your health record is securely stored following Ayushman Bharat Digital Mission (ABDM) standards and never sold or shared with third parties.',
+                            'आपका स्वास्थ्य डेटा आयुष्मान भारत डिजिटल मिशन के नियमों के अनुसार पूरी तरह निजी और सुरक्षित है।',
+                          ),
+                        ),
+
+                        const SizedBox(height: AppSpacing.xxl),
+
+                        PrimaryButton(
+                          label: state.tr(
+                            'I Understand & Consent • मैं सहमत हूँ',
+                            'मैं समझता/समझती हूँ और सहमत हूँ',
+                          ),
+                          icon: Icons.check_circle_outline,
+                          onPressed: () {
+                            context.read<AppState>().grantConsent();
+                            context.go('/patient-details');
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+
+                        SecondaryButton(
+                          label: state.tr('Not Now • अभी नहीं', 'अभी नहीं'),
+                          onPressed: () => context.go('/welcome'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-
-              const SizedBox(height: AppSpacing.lg),
-              PrimaryButton(
-                label: state.tr('I Understand & Consent', 'मैं समझता/समझती हूँ और सहमत हूँ'),
-                icon: Icons.check_rounded,
-                onPressed: () {
-                  context.read<AppState>().grantConsent();
-                  context.go('/patient-details');
-                },
-              ),
-              const SizedBox(height: AppSpacing.md),
-              SecondaryButton(
-                label: state.tr('Not Now', 'अभी नहीं'),
-                onPressed: () => context.go('/welcome'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _ConsentPoint extends StatelessWidget {
+class _ConsentCard extends StatelessWidget {
   final IconData icon;
+  final Color iconColor;
   final String title;
-  final String body;
+  final String description;
 
-  const _ConsentPoint({required this.icon, required this.title, required this.body});
+  const _ConsentCard({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.description,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+    return ClinicalCard(
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.brandLight,
-              borderRadius: BorderRadius.circular(10),
+              color: iconColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
             ),
-            child: Icon(icon, color: AppColors.brand, size: 24),
+            child: Icon(icon, color: iconColor, size: 20),
           ),
-          const SizedBox(width: AppSpacing.md),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  title,
+                  style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 4),
-                Text(body, style: AppTextStyles.label),
+                Text(
+                  description,
+                  style: AppTextStyles.bodySmall.copyWith(height: 1.45),
+                ),
               ],
             ),
           ),
