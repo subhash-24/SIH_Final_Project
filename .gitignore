@@ -2,6 +2,18 @@
 .env
 .env.local
 *.env
+backend/.env
+backend/venv/
+backend/.venv/
+backend/arogya_saathi.db
+backend/uploads/
+backend/*.pyc
+**/__pycache__/
+backend/test_*.wav
+backend/test_*.png
+backend/verify_gemini_integration.py
+patient_app/build/
+physician_app/build/
 
 # Python
 __pycache__/

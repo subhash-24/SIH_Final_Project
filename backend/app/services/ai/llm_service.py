@@ -108,17 +108,32 @@ class GeminiProvider(BaseLLMProvider):
             }
         }
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            candidates = data.get("candidates", [])
-            if not candidates:
-                raise ValueError("No candidate returned by Gemini API")
-            parts = candidates[0].get("content", {}).get("parts", [])
-            if not parts:
-                return ""
-            return parts[0].get("text", "")
+        async with httpx.AsyncClient(timeout=35.0) as client:
+            last_err = None
+            import asyncio
+            for attempt in range(2):
+                try:
+                    response = await client.post(url, json=payload, headers=headers)
+                    if response.status_code in (500, 503, 429) and attempt == 0:
+                        await asyncio.sleep(1.2)
+                        continue
+                    response.raise_for_status()
+                    data = response.json()
+                    candidates = data.get("candidates", [])
+                    if not candidates:
+                        raise ValueError("No candidate returned by Gemini API")
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if not parts:
+                        return ""
+                    return parts[0].get("text", "")
+                except (httpx.HTTPStatusError, httpx.RequestError) as ex:
+                    last_err = ex
+                    if attempt == 0:
+                        await asyncio.sleep(1.2)
+                        continue
+                    raise last_err
+            if last_err:
+                raise last_err
 
 
 # ─── Rule-Based Deterministic Fallback Provider ───────────────────────────────
@@ -132,31 +147,113 @@ class RuleBasedFallbackProvider(BaseLLMProvider):
     async def generate(self, prompt: str, system_prompt: str = "", temperature: float = 0.1) -> str:
         # If the prompt requests JSON for document extraction
         if "OCR-transcribed medical document" in prompt or "Document text:" in prompt:
+            doc_match = re.search(r'Document text:\s*"(.*?)"', prompt, re.DOTALL)
+            raw_doc = doc_match.group(1).strip() if doc_match else ""
+
+            meds = []
+            labs = []
+            diags = []
+            docs = []
+            hosps = []
+
+            for line in raw_doc.split("\n"):
+                line_clean = line.strip()
+                if not line_clean:
+                    continue
+                if re.search(r'\b(tab|tab\.|tablet|cap|capsule|syp|syrup|inj|injection|paracetamol|metformin|telmisartan|aspirin|atorvastatin|amoxicillin|azithromycin|pantoprazole|salbutamol|ibuprofen|mg|mcg|ml|od|bd|tds|sos|daily)\b', line_clean, re.I):
+                    meds.append(line_clean)
+                elif re.search(r'\b(hba1c|glucose|blood sugar|bp|hemoglobin|haemoglobin|wbc|platelet|creatinine|cholesterol|mg/dl|g/dl|mmhg)\b', line_clean, re.I):
+                    labs.append(line_clean)
+                elif re.search(r'\b(dr\.|dr |doctor)\b', line_clean, re.I):
+                    docs.append(line_clean)
+                elif re.search(r'\b(hospital|clinic|aiims|apollo|centre|center|opd)\b', line_clean, re.I):
+                    hosps.append(line_clean)
+                elif re.search(r'\b(diagnosis|fever|diabetes|hypertension|infection|disease|gastroenteritis|asthma|copd)\b', line_clean, re.I):
+                    diags.append(line_clean)
+                else:
+                    if not meds and len(line_clean) > 3:
+                        meds.append(line_clean)
+
+            if not any([meds, labs, diags, docs, hosps]):
+                if not raw_doc:
+                    meds = ["Tab Metformin 500mg", "Tab Telmisartan 40mg"]
+                    labs = ["HbA1c: 7.2%", "BP: 130/84 mmHg"]
+                    diags = ["Type 2 Diabetes Mellitus", "Essential Hypertension"]
+                else:
+                    meds = [raw_doc]
+
             return json.dumps({
-                "medicine": ["Tab Metformin 500mg", "Tab Telmisartan 40mg"],
-                "lab_value": ["HbA1c: 7.2%", "BP: 130/84 mmHg"],
-                "diagnosis": ["Type 2 Diabetes Mellitus", "Essential Hypertension"],
-                "doctor": ["Dr. A. Sharma"],
-                "hospital": ["AIIMS OPD"]
+                "medicine": meds,
+                "lab_value": labs,
+                "diagnosis": diags,
+                "doctor": docs,
+                "hospital": hosps
             })
 
         # If the prompt requests clinical entities from patient transcription
-        text_match = re.search(r'Patient text:\s*"(.*?)"', prompt, re.DOTALL)
+        text_match = re.search(r'(?:Patient text|Patient statement):\s*"(.*?)"', prompt, re.DOTALL | re.IGNORECASE)
         text = text_match.group(1) if text_match else prompt
+        text_lower = text.lower()
 
-        # Quick heuristic extraction
-        cc = "Chest Pain" if ("chest" in text.lower() or "dard" in text.lower()) else "Fever"
-        if "headache" in text.lower() or "sar dard" in text.lower():
+        # Heuristic chief complaint detection
+        if "chest" in text_lower or ("dard" in text_lower and "pet" not in text_lower and "sar" not in text_lower):
+            cc = "Chest Pain"
+        elif "headache" in text_lower or "sar dard" in text_lower:
             cc = "Headache"
-        elif "stomach" in text.lower() or "pet" in text.lower():
+        elif "stomach" in text_lower or "pet" in text_lower or "abdominal" in text_lower:
             cc = "Abdominal Pain"
+        elif "fever" in text_lower or "bukhar" in text_lower:
+            cc = "Fever"
+        elif "cough" in text_lower or "khansi" in text_lower:
+            cc = "Cough"
+        elif "vomit" in text_lower or "ulti" in text_lower:
+            cc = "Vomiting"
+        else:
+            cc = "General Malaise"
+
+        # Duration detection
+        duration = "3 days"
+        if "hour" in text_lower or "ghante" in text_lower:
+            duration = "2 hours"
+        elif "yesterday" in text_lower or "kal" in text_lower:
+            duration = "Since yesterday evening"
+        else:
+            dur_match = re.search(r'(\d+)\s*(?:day|din)s?', text_lower)
+            if dur_match:
+                duration = f"{dur_match.group(1)} days"
+
+        # Severity
+        severity = "Moderate"
+        if any(w in text_lower for w in ["severe", "tej", "bahut", "high", "extreme"]):
+            severity = "Severe"
+        elif any(w in text_lower for w in ["mild", "halka", "thoda", "slight"]):
+            severity = "Mild"
+
+        # Radiation
+        radiation = None
+        if "left arm" in text_lower or "baaye haath" in text_lower:
+            radiation = "Left arm"
+
+        # Associated symptoms
+        associated_symptoms = []
+        if ("sweat" in text_lower or "pasina" in text_lower) and cc != "Sweating":
+            associated_symptoms.append("Sweating")
+        if ("vomit" in text_lower or "ulti" in text_lower) and cc != "Vomiting":
+            associated_symptoms.append("Vomiting")
+        if ("cough" in text_lower or "khansi" in text_lower) and cc != "Cough":
+            associated_symptoms.append("Cough")
+        if ("fever" in text_lower or "bukhar" in text_lower) and cc != "Fever":
+            associated_symptoms.append("Fever")
+        if "nausea" in text_lower or "ji machalna" in text_lower:
+            associated_symptoms.append("Nausea")
 
         return json.dumps({
             "chief_complaint": cc,
-            "duration": "2 hours" if "hour" in text.lower() or "ghante" in text.lower() else "3 days",
-            "severity": "Severe" if ("severe" in text.lower() or "tej" in text.lower()) else "Moderate",
-            "radiation": "Left arm" if ("left arm" in text.lower() or "haath" in text.lower()) else None,
-            "associated_symptoms": ["Sweating"] if ("sweat" in text.lower() or "pasina" in text.lower()) else []
+            "duration": duration,
+            "severity": severity,
+            "radiation": radiation,
+            "associated_symptoms": associated_symptoms,
+            "clinical_summary": f"Patient presents with {cc.lower()} for {duration}."
         })
 
 
@@ -203,7 +300,7 @@ class LLMService:
     async def extract_clinical_information(self, text: str, context: str = "interview") -> dict[str, Any]:
         """
         Extract structured clinical fields from either an interview response or OCR document text.
-        Returns a clean dictionary of extracted entities.
+        Returns a clean dictionary of extracted entities with a source tag.
         """
         if context == "document":
             prompt = f"""You are an expert clinical medical assistant extracting clinical entities from an OCR-transcribed medical document.
@@ -239,8 +336,22 @@ Patient statement:
 """
             system_prompt = "You are an emergency triage intake assistant. Respond only with valid JSON."
 
-        raw_output = await self.generate_response(prompt, system_prompt=system_prompt)
-        return self._clean_and_parse_json(raw_output)
+        source = getattr(settings, "llm_provider", "gemini")
+        if isinstance(self.provider, RuleBasedFallbackProvider):
+            raw_output = await self.provider.generate(prompt, system_prompt=system_prompt)
+            source = "fallback"
+        else:
+            try:
+                raw_output = await self.provider.generate(prompt, system_prompt=system_prompt)
+            except Exception as e:
+                logger.error(f"Cloud LLM API error: {e}. Falling back to rule-based fallback.")
+                fallback = RuleBasedFallbackProvider()
+                raw_output = await fallback.generate(prompt, system_prompt=system_prompt)
+                source = "fallback"
+
+        result = self._clean_and_parse_json(raw_output)
+        result["_source"] = source
+        return result
 
     async def generate_follow_up_question(self, transcript: str, existing_symptoms: list[str], language: str = "en") -> str:
         """

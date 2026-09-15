@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../core/design_system.dart';
 import '../state/app_state.dart';
+import '../services/api_service.dart';
 
 /// Screen 10 — AYUSH / Prakriti Baseline
 /// Matches Stitch Screen 5 standards: Clean clinical questionnaire,
@@ -181,15 +182,15 @@ class AyushScreen extends StatelessWidget {
                                 child: Row(
                                   children: [
                                     Expanded(
-                                      flex: doshaDist['Pitta'] ?? 52,
+                                      flex: (doshaDist['Pitta'] ?? 0) > 0 ? doshaDist['Pitta']! : 1,
                                       child: Container(height: 8, color: const Color(0xFFD97706)),
                                     ),
                                     Expanded(
-                                      flex: doshaDist['Vata'] ?? 33,
+                                      flex: (doshaDist['Vata'] ?? 0) > 0 ? doshaDist['Vata']! : 1,
                                       child: Container(height: 8, color: AppColors.primary),
                                     ),
                                     Expanded(
-                                      flex: doshaDist['Kapha'] ?? 15,
+                                      flex: (doshaDist['Kapha'] ?? 0) > 0 ? doshaDist['Kapha']! : 1,
                                       child: Container(height: 8, color: const Color(0xFF1E6F50)),
                                     ),
                                   ],
@@ -199,9 +200,9 @@ class AyushScreen extends StatelessWidget {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  _buildDoshaLegend('Pitta (पित्त)', '${doshaDist['Pitta']}%', const Color(0xFFD97706)),
-                                  _buildDoshaLegend('Vata (वात)', '${doshaDist['Vata']}%', AppColors.primary),
-                                  _buildDoshaLegend('Kapha (कफ)', '${doshaDist['Kapha']}%', const Color(0xFF1E6F50)),
+                                  _buildDoshaLegend('Pitta (पित्त)', '${doshaDist['Pitta'] ?? 0}%', const Color(0xFFD97706)),
+                                  _buildDoshaLegend('Vata (वात)', '${doshaDist['Vata'] ?? 0}%', AppColors.primary),
+                                  _buildDoshaLegend('Kapha (कफ)', '${doshaDist['Kapha'] ?? 0}%', const Color(0xFF1E6F50)),
                                 ],
                               ),
                             ],
@@ -215,7 +216,7 @@ class AyushScreen extends StatelessWidget {
                           final qId = q['id'] as String;
                           final qTitle = q['title'] as String;
                           final options = q['options'] as List<Map<String, String>>;
-                          final selectedDosha = state.prakritiAnswers[qId] ?? 'pitta';
+                          final selectedDosha = state.prakritiAnswers[qId];
 
                           return Padding(
                             padding: const EdgeInsets.only(bottom: AppSpacing.lg),
@@ -233,7 +234,7 @@ class AyushScreen extends StatelessWidget {
                                   const SizedBox(height: 12),
                                   ...options.map((opt) {
                                     final optDosha = opt['dosha']!;
-                                    final isSelected = selectedDosha == optDosha;
+                                    final isSelected = selectedDosha != null && selectedDosha == optDosha;
 
                                     return InkWell(
                                       onTap: () => state.setPrakritiAnswer(qId, optDosha),
@@ -314,7 +315,15 @@ class AyushScreen extends StatelessWidget {
                             'आयुष प्रोफ़ाइल सहेजें और आगे बढ़ें',
                           ),
                           icon: Icons.arrow_forward,
-                          onPressed: () => context.go('/summary'),
+                          onPressed: () {
+                            if (state.encounterId != null && state.prakritiAnswers.isNotEmpty) {
+                              ApiService.submitPrakriti(
+                                encounterId: state.encounterId!,
+                                answers: state.prakritiAnswers,
+                              ).catchError((_) => <String, dynamic>{});
+                            }
+                            context.go('/summary');
+                          },
                         ),
                         const SizedBox(height: AppSpacing.lg),
                       ],

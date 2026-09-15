@@ -110,14 +110,13 @@ class AppState extends ChangeNotifier {
   // Document Extractions
   final List<Map<String, dynamic>> _documentExtractions = [];
   List<Map<String, dynamic>> get documentExtractions => _documentExtractions;
+  String? _uploadedDocumentName;
+  String? get uploadedDocumentName => _uploadedDocumentName;
+  String? _uploadedDocumentOcrText;
+  String? get uploadedDocumentOcrText => _uploadedDocumentOcrText;
 
   // AYUSH Prakriti Answers
-  final Map<String, String> _prakritiAnswers = {
-    'digestion': 'pitta',
-    'sleep': 'vata',
-    'frame': 'pitta',
-    'weather': 'vata',
-  };
+  final Map<String, String> _prakritiAnswers = {};
   Map<String, String> get prakritiAnswers => _prakritiAnswers;
 
   // Sync State
@@ -211,6 +210,42 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void addPastCondition(String condition) {
+    if (condition.trim().isNotEmpty) {
+      _pastConditions.add(condition.trim());
+      notifyListeners();
+    }
+  }
+
+  void clearPastConditions() {
+    _pastConditions.clear();
+    notifyListeners();
+  }
+
+  void setMedications(List<String> meds) {
+    _currentMedications.clear();
+    _currentMedications.addAll(meds.where((m) => m.trim().isNotEmpty));
+    notifyListeners();
+  }
+
+  void setAllergies(List<String> algs) {
+    _allergies.clear();
+    _allergies.addAll(algs.where((a) => a.trim().isNotEmpty));
+    notifyListeners();
+  }
+
+  void setDocumentExtractions({
+    required String filename,
+    required String ocrText,
+    required List<Map<String, dynamic>> extractions,
+  }) {
+    _uploadedDocumentName = filename;
+    _uploadedDocumentOcrText = ocrText;
+    _documentExtractions.clear();
+    _documentExtractions.addAll(extractions);
+    notifyListeners();
+  }
+
   void addDocumentExtraction(Map<String, dynamic> item) {
     _documentExtractions.add(item);
     notifyListeners();
@@ -242,23 +277,52 @@ class AppState extends ChangeNotifier {
 
     int total = vata + pitta + kapha;
     if (total == 0) {
-      return ('Pitta–Vata', {'Pitta': 52, 'Vata': 33, 'Kapha': 15});
+      return ('Not Assessed', {'Pitta': 0, 'Vata': 0, 'Kapha': 0});
     }
 
     int vPct = ((vata / total) * 100).round();
     int pPct = ((pitta / total) * 100).round();
     int kPct = 100 - (vPct + pPct);
 
-    String primary = 'Pitta–Vata';
-    if (pPct >= vPct && pPct >= kPct) {
-      primary = vPct >= kPct ? 'Pitta–Vata' : 'Pitta–Kapha';
-    } else if (vPct >= pPct && vPct >= kPct) {
-      primary = pPct >= kPct ? 'Vata–Pitta' : 'Vata–Kapha';
-    } else {
-      primary = pPct >= vPct ? 'Kapha–Pitta' : 'Kapha–Vata';
+    final counts = [
+      ('Pitta', pitta, pPct),
+      ('Vata', vata, vPct),
+      ('Kapha', kapha, kPct),
+    ]..sort((a, b) => b.$2.compareTo(a.$2));
+
+    final primaryDosha = counts[0];
+    final secondaryDosha = counts[1];
+
+    String primary = primaryDosha.$1;
+    if (secondaryDosha.$2 > 0 && secondaryDosha.$2 >= (primaryDosha.$2 * 0.6).round()) {
+      primary = '${primaryDosha.$1}–${secondaryDosha.$1}';
     }
 
     return (primary, {'Pitta': pPct, 'Vata': vPct, 'Kapha': kPct});
+  }
+
+  /// Clears all intake state so a second patient starts completely fresh
+  void resetForNewPatient() {
+    _patient = PatientData();
+    _encounterId = null;
+    _interviewId = null;
+    _voiceState = VoiceState.idle;
+    _transcript = '';
+    _audioDurationSeconds = 38;
+    _findings.clear();
+    _redFlags.clear();
+    _currentQuestion = null;
+    _questionIndex = 0;
+    _consentGranted = false;
+    _pastConditions.clear();
+    _currentMedications.clear();
+    _allergies.clear();
+    _documentExtractions.clear();
+    _uploadedDocumentName = null;
+    _uploadedDocumentOcrText = null;
+    _prakritiAnswers.clear();
+    _syncState = SyncState.synced;
+    notifyListeners();
   }
 
   void setSyncState(SyncState state) {

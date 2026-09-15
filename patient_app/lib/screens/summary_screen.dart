@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../core/design_system.dart';
 import '../state/app_state.dart';
+import '../services/api_service.dart';
 
 /// Screen 11 — Patient Intake Summary
 /// Clean structured clinical summary with provenance chips and one-touch submission
@@ -173,28 +174,110 @@ class SummaryScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Chronic Conditions: ${pastConditions.isNotEmpty ? pastConditions.join(", ") : "Hypertension (High BP)"}',
+                                'Chronic Conditions: ${pastConditions.isNotEmpty ? pastConditions.join(", ") : "None reported"}',
                                 style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w500),
                               ),
                               const Divider(height: 18, color: AppColors.border),
                               Text(
-                                'Daily Medications: Regular BP Medications (Tab Telmisartan 40mg)',
+                                'Daily Medications: ${state.currentMedications.isNotEmpty ? state.currentMedications.join(", ") : "None reported"}',
                                 style: AppTextStyles.bodySmall,
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Allergies: No known drug allergies (NKDA)',
+                                'Allergies: ${state.allergies.isNotEmpty ? state.allergies.join(", ") : "None reported"}',
                                 style: AppTextStyles.bodySmall,
                               ),
                             ],
                           ),
                         ),
 
+                        if (state.documentExtractions.isNotEmpty || state.uploadedDocumentName != null) ...[
+                          const SizedBox(height: AppSpacing.lg),
+                          _buildSectionHeader(
+                            state.tr('4. Prescriptions & Documents / पर्चे एवं दस्तावेज़', 'दस्तावेज़ एवं पर्चे'),
+                            'OCR Extracted',
+                          ),
+                          ClinicalCard(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (state.uploadedDocumentName != null) ...[
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.description_outlined, size: 18, color: AppColors.primary),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          state.uploadedDocumentName!,
+                                          style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w600),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.successBg,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'OCR Extracted',
+                                          style: AppTextStyles.labelSmall.copyWith(
+                                            color: AppColors.success,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const Divider(height: 16, color: AppColors.border),
+                                ],
+                                if (state.documentExtractions.isNotEmpty) ...[
+                                  ...state.documentExtractions.map((item) {
+                                    final cat = item['category'] ?? 'Prescribed Medicine';
+                                    final val = item['value'] ?? '';
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 3),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '• $cat: ',
+                                            style: AppTextStyles.bodySmall.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Text(
+                                              val,
+                                              style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w500),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                ] else if (state.uploadedDocumentOcrText != null && state.uploadedDocumentOcrText!.isNotEmpty) ...[
+                                  Text(
+                                    state.uploadedDocumentOcrText!,
+                                    style: AppTextStyles.bodyMedium,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+
                         const SizedBox(height: AppSpacing.lg),
 
-                        // Section 4: AYUSH Profile
+                        // AYUSH Profile
                         _buildSectionHeader(
-                          state.tr('4. AYUSH Constitutional Baseline / आयुष तासीर', 'आयुष तासीर'),
+                          state.tr(
+                            '${(state.documentExtractions.isNotEmpty || state.uploadedDocumentName != null) ? "5" : "4"}. AYUSH Constitutional Baseline / आयुष तासीर',
+                            'आयुष तासीर',
+                          ),
                           'Integrative Baseline',
                         ),
                         ClinicalCard(
@@ -216,20 +299,24 @@ class SummaryScreen extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Primary Prakriti: $primaryPrakriti',
+                                      state.prakritiAnswers.isEmpty
+                                          ? 'Primary Prakriti: Not Assessed'
+                                          : 'Primary Prakriti: $primaryPrakriti',
                                       style: AppTextStyles.labelLarge.copyWith(
-                                        color: AppColors.primary,
+                                        color: state.prakritiAnswers.isEmpty ? AppColors.textSecondary : AppColors.primary,
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                     Text(
-                                      'Questionnaire-based assessment for clinical lifestyle baseline.',
+                                      state.prakritiAnswers.isEmpty
+                                          ? 'No AYUSH baseline completed for this intake session.'
+                                          : 'Questionnaire-based assessment for clinical lifestyle baseline.',
                                       style: AppTextStyles.bodySmall.copyWith(fontSize: 11),
                                     ),
                                   ],
                                 ),
                               ),
-                              const SourceBadge(source: 'patient_reported'),
+                              SourceBadge(source: state.prakritiAnswers.isEmpty ? 'unspecified' : 'patient_reported'),
                             ],
                           ),
                         ),
@@ -242,7 +329,15 @@ class SummaryScreen extends StatelessWidget {
                             'डॉक्टर को भेजें और टोकन लें',
                           ),
                           icon: Icons.send_rounded,
-                          onPressed: () => context.go('/success'),
+                          onPressed: () {
+                            if (state.encounterId != null && state.prakritiAnswers.isNotEmpty) {
+                              ApiService.submitPrakriti(
+                                encounterId: state.encounterId!,
+                                answers: state.prakritiAnswers,
+                              ).catchError((_) => <String, dynamic>{});
+                            }
+                            context.go('/success');
+                          },
                         ),
                         const SizedBox(height: AppSpacing.lg),
                       ],

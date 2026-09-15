@@ -175,8 +175,7 @@ class SuccessScreen extends StatelessWidget {
                     label: state.tr('Done • Finish Session', 'समाप्त करें'),
                     icon: Icons.check,
                     onPressed: () {
-                      context.read<AppState>().clearFindings();
-                      context.read<AppState>().clearRedFlags();
+                      context.read<AppState>().resetForNewPatient();
                       context.go('/welcome');
                     },
                   ),

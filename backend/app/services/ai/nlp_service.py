@@ -26,6 +26,7 @@ class ExtractionResult:
     normalized_symptoms: set[str]
     raw_text: str
     is_mock: bool = True
+    source: str = "fallback"
 
 
 # ─── Pattern matching rules ──────────────────────────────────────────────────
@@ -182,6 +183,7 @@ def extract_clinical_entities(text: str) -> ExtractionResult:
         normalized_symptoms=normalized_symptoms,
         raw_text=text,
         is_mock=True,
+        source="fallback",
     )
 
 
@@ -283,11 +285,15 @@ class CloudLLMClinicalNLPService:
             from app.services.rules.red_flag_engine import normalize_symptoms as rfe_normalize
             normalized_symptoms |= rfe_normalize(raw_text)
 
+        source = data.get("_source", "cloud_llm")
+        is_mock = (source == "fallback")
+
         return ExtractionResult(
             entities=entities,
             normalized_symptoms=normalized_symptoms,
             raw_text=raw_text,
-            is_mock=False,
+            is_mock=is_mock,
+            source=source,
         )
 
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../core/design_system.dart';
+import '../state/app_state.dart';
 
 /// Screen 01 — Welcome Screen
 /// Institutional, calm, bilingual, touch-first
@@ -194,7 +196,10 @@ class WelcomeScreen extends StatelessWidget {
                         PrimaryButton(
                           label: 'Begin Check-In • पंजीकरण शुरू करें',
                           icon: Icons.arrow_forward,
-                          onPressed: () => context.go('/language'),
+                          onPressed: () {
+                            context.read<AppState>().resetForNewPatient();
+                            context.go('/language');
+                          },
                         ),
                         const SizedBox(height: AppSpacing.lg),
                       ],

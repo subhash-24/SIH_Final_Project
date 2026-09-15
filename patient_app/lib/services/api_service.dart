@@ -85,6 +85,23 @@ class ApiService {
     throw Exception('API error ${res.statusCode}: $body');
   }
 
+  /// Submit typed symptoms text for Gemini extraction
+  static Future<Map<String, dynamic>> submitTextSymptoms({
+    required String interviewId,
+    required String text,
+    String language = 'en',
+  }) async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/interviews/$interviewId/text'),
+      headers: _headers,
+      body: jsonEncode({
+        'text': text,
+        'language': language,
+      }),
+    );
+    return _parse(res);
+  }
+
   /// Upload Document
   static Future<Map<String, dynamic>> uploadDocument({
     required String encounterId,
@@ -94,7 +111,7 @@ class ApiService {
   }) async {
     final request = http.MultipartRequest(
       'POST',
-      Uri.parse('$_baseUrl/documents'),
+      Uri.parse('$_baseUrl/documents/upload'),
     );
     request.fields['encounter_id'] = encounterId;
     request.fields['document_type'] = docType;

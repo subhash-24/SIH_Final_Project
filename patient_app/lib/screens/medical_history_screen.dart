@@ -23,8 +23,64 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
     ('Chronic Kidney Disease', 'गुर्दे / किडनी की बीमारी', Icons.shield_outlined),
   ];
 
-  String _selectedMedication = 'Regular BP / Diabetes Medications';
-  String _selectedAllergy = 'No known drug allergies (NKDA)';
+  String? _selectedMedication;
+  String? _selectedAllergy;
+  late final TextEditingController _medicationCtrl;
+  late final TextEditingController _allergyCtrl;
+  late final TextEditingController _otherConditionCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final state = context.read<AppState>();
+    _medicationCtrl = TextEditingController(
+      text: state.currentMedications.isNotEmpty ? state.currentMedications.join(', ') : '',
+    );
+    _allergyCtrl = TextEditingController(
+      text: state.allergies.isNotEmpty ? state.allergies.join(', ') : '',
+    );
+    _otherConditionCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _medicationCtrl.dispose();
+    _allergyCtrl.dispose();
+    _otherConditionCtrl.dispose();
+    super.dispose();
+  }
+
+  void _saveAndContinue() {
+    final state = context.read<AppState>();
+
+    // Add custom condition if typed
+    final customCondition = _otherConditionCtrl.text.trim();
+    if (customCondition.isNotEmpty) {
+      state.addPastCondition(customCondition);
+    }
+
+    // Save medications
+    final medText = _medicationCtrl.text.trim();
+    final List<String> meds = [];
+    if (medText.isNotEmpty) {
+      meds.add(medText);
+    } else if (_selectedMedication != null && _selectedMedication!.isNotEmpty) {
+      meds.add(_selectedMedication!);
+    }
+    state.setMedications(meds);
+
+    // Save allergies
+    final algText = _allergyCtrl.text.trim();
+    final List<String> algs = [];
+    if (algText.isNotEmpty) {
+      algs.add(algText);
+    } else if (_selectedAllergy != null && _selectedAllergy!.isNotEmpty) {
+      algs.add(_selectedAllergy!);
+    }
+    state.setAllergies(algs);
+
+    context.go('/documents');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +214,26 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                           },
                         ),
 
+                        const SizedBox(height: AppSpacing.md),
+                        TextField(
+                          controller: _otherConditionCtrl,
+                          style: AppTextStyles.bodyMedium,
+                          decoration: InputDecoration(
+                            hintText: state.tr(
+                              'Other condition (e.g. Asthma) / अन्य बीमारी',
+                              'अन्य बीमारी (उदा. दमा)',
+                            ),
+                            prefixIcon: const Icon(Icons.add_circle_outline, size: 20),
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: AppColors.border),
+                            ),
+                          ),
+                        ),
+
                         const SizedBox(height: AppSpacing.xl),
 
                         // Current Medications Section
@@ -179,7 +255,18 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                             return ChoiceChip(
                               label: Text(med),
                               selected: isSel,
-                              onSelected: (_) => setState(() => _selectedMedication = med),
+                              onSelected: (_) {
+                                setState(() {
+                                  if (isSel) {
+                                    _selectedMedication = null;
+                                  } else {
+                                    _selectedMedication = med;
+                                    if (med == 'No regular daily medications') {
+                                      _medicationCtrl.clear();
+                                    }
+                                  }
+                                });
+                              },
                               selectedColor: AppColors.primary,
                               labelStyle: TextStyle(
                                 color: isSel ? Colors.white : AppColors.textPrimary,
@@ -195,6 +282,25 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                               ),
                             );
                           }).toList(),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _medicationCtrl,
+                          style: AppTextStyles.bodyMedium,
+                          decoration: InputDecoration(
+                            hintText: state.tr(
+                              'Specific medication (e.g. Salbutamol inhaler as needed)',
+                              'विशिष्ट दवा (उदा. साल्बुटामोल इनहेलर)',
+                            ),
+                            prefixIcon: const Icon(Icons.medication_outlined, size: 20),
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: AppColors.border),
+                            ),
+                          ),
                         ),
 
                         const SizedBox(height: AppSpacing.xl),
@@ -218,7 +324,18 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                             return ChoiceChip(
                               label: Text(alg),
                               selected: isSel,
-                              onSelected: (_) => setState(() => _selectedAllergy = alg),
+                              onSelected: (_) {
+                                setState(() {
+                                  if (isSel) {
+                                    _selectedAllergy = null;
+                                  } else {
+                                    _selectedAllergy = alg;
+                                    if (alg == 'No known drug allergies (NKDA)') {
+                                      _allergyCtrl.clear();
+                                    }
+                                  }
+                                });
+                              },
                               selectedColor: AppColors.primary,
                               labelStyle: TextStyle(
                                 color: isSel ? Colors.white : AppColors.textPrimary,
@@ -235,6 +352,25 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                             );
                           }).toList(),
                         ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _allergyCtrl,
+                          style: AppTextStyles.bodyMedium,
+                          decoration: InputDecoration(
+                            hintText: state.tr(
+                              'Specific allergy / अन्य एलर्जी',
+                              'विशिष्ट एलर्जी (उदा. पेनिसिलिन)',
+                            ),
+                            prefixIcon: const Icon(Icons.warning_amber_outlined, size: 20),
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: AppColors.border),
+                            ),
+                          ),
+                        ),
 
                         const SizedBox(height: AppSpacing.xxl),
 
@@ -244,7 +380,7 @@ class _MedicalHistoryScreenState extends State<MedicalHistoryScreen> {
                             'इतिहास सहेजें और आगे बढ़ें',
                           ),
                           icon: Icons.arrow_forward,
-                          onPressed: () => context.go('/documents'),
+                          onPressed: _saveAndContinue,
                         ),
                         const SizedBox(height: AppSpacing.lg),
                       ],

@@ -7,8 +7,6 @@ import '../state/app_state.dart';
 import '../services/api_service.dart';
 
 /// Screen 09 — Document OCR & Clinical Review
-/// Matches Stitch Screen 4 standards: Scan / Upload / Skip actions, document preview,
-/// structured OCR findings with provenance labels and inline editing.
 class DocumentsScreen extends StatefulWidget {
   const DocumentsScreen({super.key});
 
@@ -20,40 +18,36 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   final ImagePicker _picker = ImagePicker();
   bool _isUploading = false;
   String? _uploadedFilename;
+  final List<Map<String, String>> _ocrItems = [];
 
-  // Local editable list of OCR extractions
-  final List<Map<String, String>> _ocrItems = [
-    {
-      'category': 'Prescribed Medicine',
-      'value': 'Tab Metformin 500mg — 1 tab BD after meals',
-      'source': 'document_extracted',
-      'status': 'Confirmed',
-    },
-    {
-      'category': 'Prescribed Medicine',
-      'value': 'Tab Telmisartan 40mg — 1 tab OD morning',
-      'source': 'document_extracted',
-      'status': 'Confirmed',
-    },
-    {
-      'category': 'Lab Value',
-      'value': 'HbA1c: 7.2% • Fasting Glucose: 138 mg/dL',
-      'source': 'document_extracted',
-      'status': 'Needs review',
-    },
-    {
-      'category': 'Clinical Diagnosis',
-      'value': 'Type 2 Diabetes Mellitus • Essential Hypertension',
-      'source': 'document_extracted',
-      'status': 'Confirmed',
-    },
-    {
-      'category': 'Consultant & Hospital',
-      'value': 'Dr. A. Sharma • AIIMS New Delhi (14 Aug 2024)',
-      'source': 'document_extracted',
-      'status': 'Confirmed',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    final state = context.read<AppState>();
+    if (state.uploadedDocumentName != null) {
+      _uploadedFilename = state.uploadedDocumentName;
+    }
+    for (final item in state.documentExtractions) {
+      _ocrItems.add(Map<String, String>.from(item.map((k, v) => MapEntry(k, v.toString()))));
+    }
+  }
+
+  String _mapCategory(String entityType) {
+    switch (entityType.toLowerCase()) {
+      case 'medicine':
+        return 'Prescribed Medicine';
+      case 'lab_value':
+        return 'Lab Value';
+      case 'diagnosis':
+        return 'Clinical Diagnosis';
+      case 'doctor':
+        return 'Consultant Doctor';
+      case 'hospital':
+        return 'Hospital / Clinic';
+      default:
+        return 'Clinical Record';
+    }
+  }
 
   Future<void> _pickImage(ImageSource source) async {
     try {
@@ -68,25 +62,60 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         final state = context.read<AppState>();
         final encId = state.encounterId ?? 'mock-enc-01';
 
-        try {
-          await ApiService.uploadDocument(
-            encounterId: encId,
-            fileBytes: bytes,
-            filename: image.name,
-          );
-        } catch (_) {
-          // Graceful fallback for demo/offline
+        final res = await ApiService.uploadDocument(
+          encounterId: encId,
+          fileBytes: bytes,
+          filename: image.name,
+        );
+
+        final ocrText = (res['ocr_text'] as String?) ?? '';
+        final extractions = (res['extractions'] as List<dynamic>?) ?? [];
+        final List<Map<String, String>> newItems = [];
+
+        for (final e in extractions) {
+          final fieldType = e['entity_type']?.toString() ?? 'medicine';
+          final val = e['value']?.toString() ?? '';
+          if (val.trim().isNotEmpty) {
+            newItems.add({
+              'category': _mapCategory(fieldType),
+              'value': val.trim(),
+              'source': 'document_extracted',
+              'status': 'Confirmed',
+            });
+          }
+        }
+
+        if (newItems.isEmpty && ocrText.trim().isNotEmpty) {
+          newItems.add({
+            'category': 'Prescribed Medicine',
+            'value': ocrText.trim(),
+            'source': 'document_extracted',
+            'status': 'Confirmed',
+          });
         }
 
         if (mounted) {
+          setState(() {
+            _ocrItems.clear();
+            _ocrItems.addAll(newItems);
+            _uploadedFilename = image.name;
+          });
+
+          state.setDocumentExtractions(
+            filename: image.name,
+            ocrText: ocrText,
+            extractions: _ocrItems,
+          );
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
                 state.tr(
-                  'Document processed with OCR successfully.',
-                  'दस्तावेज़ ओसीआर द्वारा सफलतापूर्वक स्कैन किया गया।',
+                  'Document processed with OCR: ${_ocrItems.length} records extracted.',
+                  'दस्तावेज़ ओसीआर द्वारा स्कैन किया गया: ${_ocrItems.length} रिकॉर्ड निकाले गए।',
                 ),
               ),
+              backgroundColor: AppColors.primary,
             ),
           );
         }
@@ -94,7 +123,10 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Note: $e')),
+          SnackBar(
+            content: Text('Upload failed: $e'),
+            backgroundColor: AppColors.urgent,
+          ),
         );
       }
     } finally {
@@ -147,6 +179,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                   _ocrItems[index]['value'] = ctrl.text.trim();
                   _ocrItems[index]['status'] = 'Confirmed';
                 });
+                final state = context.read<AppState>();
+                state.updateDocumentExtraction(index, ctrl.text.trim(), 'Confirmed');
               }
               Navigator.pop(ctx);
             },
@@ -155,6 +189,18 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         ],
       ),
     );
+  }
+
+  void _proceedToNext() {
+    final state = context.read<AppState>();
+    if (_uploadedFilename != null) {
+      state.setDocumentExtractions(
+        filename: _uploadedFilename!,
+        ocrText: state.uploadedDocumentOcrText ?? '',
+        extractions: _ocrItems,
+      );
+    }
+    context.go('/ayush');
   }
 
   @override
@@ -257,61 +303,97 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
 
                         const SizedBox(height: AppSpacing.xl),
 
-                        // Document Preview Banner
-                        ClinicalCard(
-                          padding: const EdgeInsets.all(AppSpacing.md),
-                          backgroundColor: AppColors.surfaceContainerLow,
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: AppColors.surface,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: AppColors.border),
+                        // Uploading Loading State
+                        if (_isUploading) ...[
+                          ClinicalCard(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            backgroundColor: AppColors.surfaceContainerLow,
+                            child: Row(
+                              children: [
+                                const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(strokeWidth: 2.5),
                                 ),
-                                child: const Icon(Icons.description, color: AppColors.primary, size: 24),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _uploadedFilename ?? 'Prescription_AIIMS_Aug2024.jpg',
-                                      style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w600),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'OCR Status: Analyzed • 5 Entities Extracted',
-                                      style: AppTextStyles.labelSmall.copyWith(color: AppColors.success),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppColors.successBg,
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
-                                ),
-                                child: Text(
-                                  'OCR Synced',
-                                  style: AppTextStyles.labelSmall.copyWith(
-                                    color: AppColors.success,
-                                    fontWeight: FontWeight.w700,
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        state.tr('Processing document with OCR...', 'दस्तावेज़ को ओसीआर द्वारा स्कैन किया जा रहा है...'),
+                                        style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w600),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        state.tr('Extracting medicines, lab values, and clinical findings.', 'दवाओं और परीक्षणों की जानकारी निकाली जा रही है।'),
+                                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: AppSpacing.xl),
+                        ],
 
-                        const SizedBox(height: AppSpacing.xl),
+                        // Document Preview Banner (if uploaded)
+                        if (_uploadedFilename != null) ...[
+                          ClinicalCard(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            backgroundColor: AppColors.surfaceContainerLow,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: AppColors.border),
+                                  ),
+                                  child: const Icon(Icons.description, color: AppColors.primary, size: 24),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _uploadedFilename!,
+                                        style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w600),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'OCR Status: Analyzed • ${_ocrItems.length} Entities Extracted',
+                                        style: AppTextStyles.labelSmall.copyWith(color: AppColors.success),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.successBg,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                                  ),
+                                  child: Text(
+                                    'OCR Synced',
+                                    style: AppTextStyles.labelSmall.copyWith(
+                                      color: AppColors.success,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                        ],
 
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -328,87 +410,116 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                         ),
                         const SizedBox(height: AppSpacing.sm),
 
-                        // OCR Extracted Items Stack
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _ocrItems.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-                          itemBuilder: (ctx, i) {
-                            final item = _ocrItems[i];
-                            final isConfirmed = item['status'] == 'Confirmed';
-
-                            return ClinicalCard(
-                              padding: const EdgeInsets.all(AppSpacing.md),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        // Empty State if no document yet
+                        if (_ocrItems.isEmpty && !_isUploading) ...[
+                          ClinicalCard(
+                            padding: const EdgeInsets.all(AppSpacing.xl),
+                            child: Center(
+                              child: Column(
                                 children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Text(
-                                              item['category']!,
-                                              style: AppTextStyles.labelSmall.copyWith(
-                                                color: AppColors.textSecondary,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            SourceBadge(source: item['source']!),
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: isConfirmed
-                                                    ? AppColors.successBg
-                                                    : AppColors.warningBg,
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                item['status']!,
-                                                style: AppTextStyles.labelSmall.copyWith(
-                                                  color: isConfirmed
-                                                      ? AppColors.success
-                                                      : AppColors.warning,
-                                                  fontSize: 10,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          item['value']!,
-                                          style: AppTextStyles.bodyMedium.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.textPrimary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                  Icon(Icons.document_scanner_outlined, size: 40, color: AppColors.textSecondary.withValues(alpha: 0.5)),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    state.tr('No document processed yet', 'अभी तक कोई दस्तावेज़ स्कैन नहीं किया गया'),
+                                    style: AppTextStyles.labelMedium.copyWith(color: AppColors.textSecondary),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.primary),
-                                    onPressed: () => _editItem(i),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    state.tr('Scan or upload your previous prescription above, or skip to continue.', 'ऊपर दिए गए बटन से पर्चा स्कैन करें या आगे बढ़ें।'),
+                                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ],
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          ),
+                        ],
+
+                        // OCR Extracted Items Stack
+                        if (_ocrItems.isNotEmpty) ...[
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _ocrItems.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+                            itemBuilder: (ctx, i) {
+                              final item = _ocrItems[i];
+                              final isConfirmed = item['status'] == 'Confirmed';
+
+                              return ClinicalCard(
+                                padding: const EdgeInsets.all(AppSpacing.md),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                item['category']!,
+                                                style: AppTextStyles.labelSmall.copyWith(
+                                                  color: AppColors.textSecondary,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              SourceBadge(source: item['source']!),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: isConfirmed
+                                                      ? AppColors.successBg
+                                                      : AppColors.warningBg,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  item['status']!,
+                                                  style: AppTextStyles.labelSmall.copyWith(
+                                                    color: isConfirmed
+                                                        ? AppColors.success
+                                                        : AppColors.warning,
+                                                    fontSize: 10,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            item['value']!,
+                                            style: AppTextStyles.bodyMedium.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.textPrimary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.primary),
+                                      onPressed: () => _editItem(i),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ],
 
                         const SizedBox(height: AppSpacing.xxl),
 
                         PrimaryButton(
                           label: state.tr(
-                            'Confirm Records & Proceed to AYUSH • आगे बढ़ें',
+                            _ocrItems.isNotEmpty
+                                ? 'Confirm Records & Proceed to AYUSH • आगे बढ़ें'
+                                : 'Proceed to AYUSH • आगे बढ़ें',
                             'पुष्टि करें और आयुष प्रोफ़ाइल पर जाएं',
                           ),
                           icon: Icons.arrow_forward,
-                          onPressed: () => context.go('/ayush'),
+                          onPressed: _proceedToNext,
                         ),
                         const SizedBox(height: AppSpacing.lg),
                       ],

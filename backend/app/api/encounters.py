@@ -140,6 +140,11 @@ class InterviewStart(BaseModel):
     language: str = "en"
 
 
+class InterviewText(BaseModel):
+    text: str
+    language: str = "en"
+
+
 @router.post("/interviews/start", status_code=status.HTTP_201_CREATED)
 def start_interview(payload: InterviewStart, db: Session = Depends(get_db)):
     interview = Interview(
@@ -165,52 +170,33 @@ def start_interview(payload: InterviewStart, db: Session = Depends(get_db)):
     }
 
 
-@router.post("/interviews/{interview_id}/audio")
-async def submit_audio(
-    interview_id: str,
-    audio: UploadFile = File(None),
-    language: str = Form("en"),
-    scenario_hint: str = Form(None),
-    db: Session = Depends(get_db),
+async def _process_interview_response(
+    interview: Interview,
+    text: str,
+    language: str,
+    confidence: float,
+    is_mock: bool,
+    db: Session,
 ):
     """
-    Receive audio blob → ASR → Clinical NLP → Red Flag Detection.
-    Returns structured extraction.
+    Common clinical extraction, storage, and triage logic shared by audio and text intake.
     """
-    from app.services.ai.asr_service import get_asr_service
     from app.services.ai.nlp_service import get_nlp_service
     from app.services.rules.red_flag_engine import evaluate_red_flags, get_highest_severity
 
-    interview = db.query(Interview).filter(Interview.id == interview_id).first()
-    if not interview:
-        raise HTTPException(status_code=404, detail="Interview not found")
-
-    # Read audio bytes (or use hint for demo)
-    audio_bytes = None
-    if audio:
-        audio_bytes = await audio.read()
-
-    # ASR
-    asr = get_asr_service()
-    transcription = await asr.transcribe(
-        audio_data=audio_bytes,
-        language=language,
-        scenario_hint=scenario_hint,
-    )
-
     # NLP extraction
     nlp = get_nlp_service()
-    extraction = await nlp.extract_async(transcription.text)
+    extraction = await nlp.extract_async(text)
 
     # Save transcript segment
     segment = TranscriptSegment(
-        interview_id=interview_id,
+        interview_id=interview.id,
         sequence=interview.current_question_index,
         question=_get_question(interview.current_question_index, language),
-        response_text=transcription.text,
-        confidence=transcription.confidence,
-        language=transcription.language,
-        is_mock=transcription.is_mock,
+        response_text=text,
+        confidence=confidence,
+        language=language,
+        is_mock=is_mock or extraction.is_mock,
     )
     db.add(segment)
 
@@ -236,7 +222,7 @@ async def submit_audio(
     # Red flag evaluation
     rf_results = evaluate_red_flags(
         symptoms=extraction.normalized_symptoms,
-        clinical_text=transcription.text,
+        clinical_text=text,
     )
 
     triggered_flags = []
@@ -283,10 +269,11 @@ async def submit_audio(
     next_question = _get_adaptive_question(extraction, next_idx, language)
 
     return {
-        "transcript": transcription.text,
-        "language": transcription.language,
-        "confidence": transcription.confidence,
-        "is_mock": transcription.is_mock,
+        "transcript": text,
+        "language": language,
+        "confidence": confidence,
+        "is_mock": extraction.is_mock or is_mock,
+        "extraction_source": getattr(extraction, "source", "mock" if extraction.is_mock else "cloud_llm"),
         "extracted_fields": [
             {"field_type": e.field_type, "value": e.value, "source": e.source, "confidence": e.confidence}
             for e in extraction.entities
@@ -296,6 +283,71 @@ async def submit_audio(
         "next_question": next_question,
         "question_index": next_idx,
     }
+
+
+@router.post("/interviews/{interview_id}/text")
+async def submit_text(
+    interview_id: str,
+    payload: InterviewText,
+    db: Session = Depends(get_db),
+):
+    """
+    Receive typed patient text → Clinical NLP (Gemini / rule fallback) → Red Flag Detection.
+    Returns structured extraction identical to audio endpoint.
+    """
+    interview = db.query(Interview).filter(Interview.id == interview_id).first()
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview not found")
+
+    return await _process_interview_response(
+        interview=interview,
+        text=payload.text,
+        language=payload.language or "en",
+        confidence=1.0,
+        is_mock=False,
+        db=db,
+    )
+
+
+@router.post("/interviews/{interview_id}/audio")
+async def submit_audio(
+    interview_id: str,
+    audio: UploadFile = File(None),
+    language: str = Form("en"),
+    scenario_hint: str = Form(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Receive audio blob → ASR → Clinical NLP → Red Flag Detection.
+    Returns structured extraction.
+    """
+    from app.services.ai.asr_service import get_asr_service
+
+    interview = db.query(Interview).filter(Interview.id == interview_id).first()
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview not found")
+
+    # Read audio bytes (or use hint for demo)
+    audio_bytes = None
+    if audio:
+        audio_bytes = await audio.read()
+
+    # ASR
+    asr = get_asr_service()
+    transcription = await asr.transcribe(
+        audio_data=audio_bytes,
+        language=language,
+        scenario_hint=scenario_hint,
+    )
+
+    return await _process_interview_response(
+        interview=interview,
+        text=transcription.text,
+        language=transcription.language or language,
+        confidence=transcription.confidence,
+        is_mock=transcription.is_mock,
+        db=db,
+    )
 
 
 @router.get("/interviews/{interview_id}/transcript")

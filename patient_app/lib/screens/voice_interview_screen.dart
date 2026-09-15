@@ -163,9 +163,10 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen> with Ticker
         state.setTranscript(result['transcript']);
       }
 
-      if (result.containsKey('findings') && result['findings'] is List) {
+      final extractedList = (result['extracted_fields'] ?? result['findings']) as List?;
+      if (extractedList != null) {
         state.clearFindings();
-        final findings = (result['findings'] as List).map((f) {
+        final findings = extractedList.map((f) {
           return ClinicalFinding(
             fieldType: f['field_type'] ?? 'symptom',
             value: f['value'] ?? '',
@@ -299,52 +300,69 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen> with Ticker
     final state = context.read<AppState>();
     state.setTranscript(text);
 
-    // Heuristic or server extraction
-    final List<ClinicalFinding> findings = [];
-    final lower = text.toLowerCase();
-    if (lower.contains('chest') || lower.contains('seene') || lower.contains('dard')) {
-      findings.add(ClinicalFinding(fieldType: 'chief_complaint', value: 'Chest Pain', source: 'patient_reported'));
-    } else {
-      findings.add(ClinicalFinding(fieldType: 'chief_complaint', value: text.split('.').first, source: 'patient_reported'));
+    final interviewId = state.interviewId ?? 'mock-int-01';
+
+    try {
+      // Call backend Gemini NLP pipeline for typed input
+      final result = await ApiService.submitTextSymptoms(
+        interviewId: interviewId,
+        text: text,
+        language: state.languageCode,
+      );
+
+      if (result.containsKey('transcript')) {
+        state.setTranscript(result['transcript']);
+      }
+
+      final extractedList = (result['extracted_fields'] ?? result['findings']) as List?;
+      if (extractedList != null) {
+        state.clearFindings();
+        final findings = extractedList.map((f) {
+          return ClinicalFinding(
+            fieldType: f['field_type'] ?? 'symptom',
+            value: f['value'] ?? '',
+            source: f['source'] ?? 'ai_extracted',
+            needsReview: true,
+          );
+        }).toList();
+        state.addFindings(findings);
+      }
+
+      if (result['has_red_flags'] == true && result['red_flags'] is List) {
+        state.clearRedFlags();
+        final redFlags = (result['red_flags'] as List).map((rf) {
+          return RedFlagInfo(
+            ruleName: rf['rule_name'] ?? 'Emergency Pattern',
+            severity: rf['severity'] ?? 'urgent',
+            patientMessage: rf['patient_message'] ?? 'Physician assessment required.',
+            triggeredBy: List<String>.from(rf['triggered_by'] ?? []),
+          );
+        }).toList();
+        state.addRedFlags(redFlags);
+      }
+    } catch (e) {
+      debugPrint('Text symptom submission error, using fallback: $e');
+      // NOTE: Old local keyword matching (chest/seene/dard) has been decommissioned.
+      // Emergency offline fallback only sets basic fields if server is completely unreachable:
+      final List<ClinicalFinding> fallbackFindings = [];
+      fallbackFindings.add(ClinicalFinding(
+        fieldType: 'chief_complaint',
+        value: text.split('.').first,
+        source: 'patient_reported',
+      ));
+      fallbackFindings.add(ClinicalFinding(
+        fieldType: 'duration',
+        value: 'Recent onset',
+        source: 'patient_reported',
+      ));
+      state.clearFindings();
+      state.addFindings(fallbackFindings);
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        context.go('/transcript');
+      }
     }
-
-    if (lower.contains('hour') || lower.contains('ghante')) {
-      findings.add(ClinicalFinding(fieldType: 'duration', value: '2 hours', source: 'patient_reported'));
-    } else {
-      findings.add(ClinicalFinding(fieldType: 'duration', value: 'Recent onset', source: 'patient_reported'));
-    }
-
-    if (lower.contains('severe') || lower.contains('tej')) {
-      findings.add(ClinicalFinding(fieldType: 'severity', value: 'Severe', source: 'patient_reported'));
-    }
-
-    if (lower.contains('left arm') || lower.contains('haath') || lower.contains('arm')) {
-      findings.add(ClinicalFinding(fieldType: 'radiation', value: 'Left arm', source: 'patient_reported'));
-    }
-
-    if (lower.contains('sweat') || lower.contains('pasina')) {
-      findings.add(ClinicalFinding(fieldType: 'associated', value: 'Sweating', source: 'patient_reported'));
-    }
-
-    // Cardiac pattern check
-    if ((lower.contains('chest') || lower.contains('seene')) &&
-        (lower.contains('arm') || lower.contains('haath') || lower.contains('sweat') || lower.contains('pasina'))) {
-      state.clearRedFlags();
-      state.addRedFlags([
-        RedFlagInfo(
-          ruleName: 'Possible Cardiac Emergency',
-          severity: 'urgent',
-          patientMessage: 'Emergency symptom pattern detected. Physician assessment required.',
-          triggeredBy: ['chest_pain', 'sweating', 'radiation_arm'],
-        )
-      ]);
-    }
-
-    state.clearFindings();
-    state.addFindings(findings);
-
-    setState(() => _isProcessing = false);
-    if (mounted) context.go('/transcript');
   }
 
   @override
