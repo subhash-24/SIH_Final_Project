@@ -329,14 +329,31 @@ class SummaryScreen extends StatelessWidget {
                             'डॉक्टर को भेजें और टोकन लें',
                           ),
                           icon: Icons.send_rounded,
-                          onPressed: () {
-                            if (state.encounterId != null && state.prakritiAnswers.isNotEmpty) {
-                              ApiService.submitPrakriti(
-                                encounterId: state.encounterId!,
-                                answers: state.prakritiAnswers,
-                              ).catchError((_) => <String, dynamic>{});
+                          onPressed: () async {
+                            final encId = state.encounterId;
+                            if (encId != null) {
+                              if (state.prakritiAnswers.isNotEmpty) {
+                                ApiService.submitPrakriti(
+                                  encounterId: encId,
+                                  answers: state.prakritiAnswers,
+                                ).catchError((_) => <String, dynamic>{});
+                              }
+                              try {
+                                await ApiService.submitEncounter(encId);
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Warning: Queue sync delayed (${e.toString()}). Proceeding with token.'),
+                                      backgroundColor: AppColors.warning,
+                                    ),
+                                  );
+                                }
+                              }
                             }
-                            context.go('/success');
+                            if (context.mounted) {
+                              context.go('/success');
+                            }
                           },
                         ),
                         const SizedBox(height: AppSpacing.lg),
